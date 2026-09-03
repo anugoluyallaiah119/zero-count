@@ -1,0 +1,19 @@
+# Staging overrides (SPRING_PROFILES_ACTIVE=staging).
+# Like prod: datasource/redis are mandatory, rooms run on Redis. Unlike
+# prod the auth provider stays env-selectable so QA can use the fixed OTP
+# code. JWT_SECRET has no default here: an unset placeholder fails startup
+# (and deploy.sh independently enforces >= 32 bytes).
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+app:
+  auth:
+    jwt-secret: ${JWT_SECRET}
+  rooms:
+    store: redis
+management:
+  health:
+    redis:
+      enabled: true

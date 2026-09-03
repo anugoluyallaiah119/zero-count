@@ -1,0 +1,8 @@
+# Build context is the repo root; only backend sources are needed.
+app/
+**/target/
+**/.idea/
+**/.vscode/
+.git/
+**/build/
+**/.dart_tool/

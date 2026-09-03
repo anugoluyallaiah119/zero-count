@@ -1,0 +1,61 @@
+# Zero Count V2 — game-server configuration.
+# All environment-specific values come from env vars (standards §3: no secrets
+# or env-specific literals in code). Sensible local-dev defaults only.
+
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: zerocount-game-server
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/zerocount}
+    username: ${DB_USER:zerocount}
+    password: ${DB_PASSWORD:}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # Fail fast on any out-of-order or drifted migration — schema integrity
+    # is the source of truth (standards §3.2).
+    validate-on-migrate: true
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}
+
+app:
+  version: ${APP_VERSION:2.0.0-SNAPSHOT}
+  auth:
+    # dev = deterministic fixed-code provider (local/CI ONLY).
+    # firebase = production; requires app.firebase.project-id.
+    provider: ${AUTH_PROVIDER:dev}
+    dev-code: ${DEV_OTP_CODE:123456}
+    jwt-secret: ${JWT_SECRET:}        # >=32 bytes; empty = ephemeral dev secret (warned)
+    access-ttl-minutes: ${ACCESS_TTL_MINUTES:15}
+    refresh-ttl-days: ${REFRESH_TTL_DAYS:7}
+  firebase:
+    project-id: ${FIREBASE_PROJECT_ID:}
+  rooms:
+    # memory = single-JVM dev/test default; redis = production multi-instance.
+    store: ${ROOMS_STORE:memory}
+    ttl-hours: ${ROOM_TTL_HOURS:2}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    diskspace:
+      # Monitor the root filesystem, not the working directory (some container
+      # mounts report 0 free bytes). Override per environment as needed.
+      path: ${DISKSPACE_HEALTH_PATH:/}
+      threshold: ${DISKSPACE_HEALTH_THRESHOLD:100MB}
+    redis:
+      # Off by default (memory room store in dev); prod profile enables it.
+      enabled: ${REDIS_HEALTH_ENABLED:false}

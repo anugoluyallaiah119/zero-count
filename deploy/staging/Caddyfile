@@ -1,0 +1,35 @@
+# Zero Count V2 — staging reverse proxy (E4.3).
+# Caddy obtains and renews a Let's Encrypt certificate automatically for
+# the domain below. The domain is injected by deploy.sh via envsubst-style
+# placeholder replacement at deploy time (see deploy.sh).
+#
+# Requirements on the host: DNS A/AAAA record for the domain pointing at
+# the host, and inbound 80/443 open (ACME HTTP-01/TLS-ALPN-01 challenge).
+
+{$API_DOMAIN} {
+	encode zstd gzip
+
+	# API traffic.
+	reverse_proxy api:8080 {
+		health_uri /actuator/health
+		health_interval 15s
+		health_timeout 5s
+	}
+
+	# Security headers.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 50MB
+			roll_keep 5
+		}
+		format json
+	}
+}

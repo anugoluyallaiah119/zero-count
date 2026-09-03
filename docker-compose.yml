@@ -1,0 +1,65 @@
+# Zero Count V2 — full local stack (E4.1).
+#   docker compose up --build
+# brings up Postgres + Redis + the game server with dev auth (fixed OTP
+# code 123456). The Flutter dev flavor points at http://localhost:8080.
+#
+# NOT for production: JWT_SECRET here is a throwaway dev value, OTP code is
+# fixed, and Postgres credentials are local-only. Prod injects real secrets.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: zerocount
+      POSTGRES_USER: zerocount
+      POSTGRES_PASSWORD: zerocount-dev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zerocount -d zerocount"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      SERVER_PORT: "8080"
+      DB_URL: jdbc:postgresql://postgres:5432/zerocount
+      DB_USER: zerocount
+      DB_PASSWORD: zerocount-dev
+      REDIS_URL: redis://redis:6379
+      ROOMS_STORE: redis
+      REDIS_HEALTH_ENABLED: "true"
+      AUTH_PROVIDER: dev
+      DEV_OTP_CODE: "123456"
+      # Dev-only secret (>=32 bytes). Production must inject a real one.
+      JWT_SECRET: dev-only-insecure-secret-change-me-0123456789
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:
+  redisdata:

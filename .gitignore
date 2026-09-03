@@ -1,0 +1,36 @@
+# Build outputs
+target/
+build/
+out/
+
+# Java / Maven
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock
+*.iml
+
+# IDE
+.idea/
+.vscode/
+
+# OS & Temp
+.DS_Store
+.playwright-mcp/
+
+# Verification artifacts stay out of the repo (CI regenerates them)
+app/build/
+
+# Local env / secrets — never committed (standards §3.1)
+.env
+*.pem
+google-services.json
+
+# E4.3 — never commit filled staging secrets
+deploy/staging/.env

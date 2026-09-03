@@ -1,0 +1,92 @@
+# Zero Count V2 — staging stack (E4.3).
+#
+# Runs the full backend on a single staging host behind Caddy, which
+# terminates TLS automatically (Let's Encrypt) for the configured domain.
+#
+# Usage (on the staging host):
+#   cp .env.example .env        # fill in real values — see deploy/README.md
+#   ./deploy.sh                 # build, migrate, launch, health-check
+#
+# Differences from the local root docker-compose.yml:
+#   - Postgres/Redis are NOT published to the host (internal network only).
+#   - The API is not directly exposed; only Caddy publishes 80/443.
+#   - SPRING_PROFILES_ACTIVE=staging: datasource/redis are mandatory,
+#     JWT_SECRET must be a real injected secret, rooms run on Redis.
+#   - Persistent named volumes for pgdata/redisdata/caddydata.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    # No host port — reachable only inside the compose network.
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+    environment:
+      SERVER_PORT: "8080"
+      SPRING_PROFILES_ACTIVE: staging
+      APP_VERSION: ${APP_VERSION}
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_URL: redis://redis:6379
+      ROOMS_STORE: redis
+      REDIS_HEALTH_ENABLED: "true"
+      # Staging keeps the dev OTP provider so QA can log in without SMS
+      # costs; set AUTH_PROVIDER=firebase + FIREBASE_PROJECT_ID to rehearse
+      # the production path end to end.
+      AUTH_PROVIDER: ${AUTH_PROVIDER:-dev}
+      DEV_OTP_CODE: ${DEV_OTP_CODE:-123456}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    # No host port — Caddy proxies to api:8080.
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  caddydata:
+  caddyconfig:

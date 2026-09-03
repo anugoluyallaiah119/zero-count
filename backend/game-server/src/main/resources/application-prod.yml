@@ -1,0 +1,16 @@
+# Production overrides (SPRING_PROFILES_ACTIVE=prod).
+# Hard-pins the real provider so a misconfigured env can never fall back to dev OTP.
+app:
+  auth:
+    provider: firebase
+  rooms:
+    store: redis
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+management:
+  health:
+    redis:
+      enabled: true
