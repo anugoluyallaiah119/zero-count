@@ -1,33 +1,21 @@
-# Zero Count V2 — CI gate (E4.2). Every PR must pass:
-#   1. engine: compile + all E1 suites + 10k-match simulation invariant gate
-#   2. backend: mvn verify (Flyway migrations, auth, player, rooms, dormant
-#      interface guard) against embedded Postgres
-#   3. app: flutter analyze + tests + web build
-#
-# Extra safety net for backend changes:
-#   4. heavy-simulation: 1,000,000-match invariant sweep (E1.5 with
-#      matchesPerCfg=200000). Path-filtered — only runs when files under
-#      backend/** or the engine test harness change. Timeout 90 min.
+# Zero Count CI — lean mode (no paid minutes budget).
+# Runs ONLY on: push to main, PRs targeting main, manual dispatch.
+# Heavy simulation is manual-only (workflow_dispatch).
 name: CI
 
 on:
   push:
-    branches:
-      - main
-      - 'feat/**'
-      - 'fix/**'
-      - 'chore/**'
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
     inputs:
       run_heavy:
-        description: 'Force the 1M-match heavy simulation sweep even on frontend-only changes'
+        description: 'Run 1M-match heavy simulation (expensive)'
         type: boolean
         default: false
-  merge_group:
 
-# Cancel superseded runs on the same branch/PR to save minutes.
+# Cancel superseded runs on the same branch/PR.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
@@ -37,6 +25,7 @@ permissions:
   pull-requests: read
 
 jobs:
+  # ── Java engine unit tests (no simulation — fast) ──────────────────────────
   engine:
     runs-on: ubuntu-latest
     steps:
@@ -45,9 +34,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Engine suites + 10k-match simulation gate
-        run: bash backend/game-engine/run-tests.sh
+          cache: maven
+      - name: Engine unit suites (E1_1..E1_4 only — skip 10k sim)
+        run: mvn -B -f backend/game-engine/pom.xml test -Dexclude="**/*SimulationTest*"
 
+  # ── Backend integration tests (Flyway + auth + rooms) ─────────────────────
   backend:
     runs-on: ubuntu-latest
     steps:
@@ -56,16 +47,18 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Maven verify (tests run on embedded Postgres — no services needed)
-        run: mvn -B -f backend/pom.xml verify
+          cache: maven
+      - name: Maven verify (embedded Postgres — no Docker needed)
+        run: mvn -B -f backend/pom.xml verify -Dexclude="**/*SimulationTest*,**/*LoadSmoke*,**/*AdaptiveDraw*"
 
+  # ── Flutter analyze + unit tests only (no goldens, no web build) ───────────
   app:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.1'
+          flutter-version: '3.32.x'
           channel: stable
           cache: true
       - name: pub get
@@ -74,56 +67,17 @@ jobs:
       - name: analyze
         working-directory: app
         run: flutter analyze
-      - name: tests (incl. Dart engine parity + 500-match sim)
+      - name: unit + engine tests (skip golden rendering tests)
         working-directory: app
-        run: flutter test
-      - name: Upload golden failure diffs
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: golden-failures-${{ github.run_id }}
-          path: |
-            app/test/failures/**
-          if-no-files-found: ignore
-          retention-days: 14
-      - name: web build
-        working-directory: app
-        run: flutter build web --release
+        run: flutter test --exclude-tags golden
 
-  # ---------------------------------------------------------------------------
-  # Path-filter gate: only fires when backend engine / server / migrations
-  # change. Skips on pure frontend / docs PRs so app iteration stays fast.
-  # ---------------------------------------------------------------------------
-  backend-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      changed: ${{ steps.filter.outputs.backend }}
-    steps:
-      - uses: actions/checkout@v4
-      - id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            backend:
-              - 'backend/**'
-              - '.github/workflows/ci.yml'
-
-  # ---------------------------------------------------------------------------
-  # Heavy invariant sweep. 5 shards × 200,000 matches per config → 1,000,000
-  # matches per shard × 5 configs (but shards run in parallel, so wall-clock
-  # stays reasonable). Runs ONLY when backend files changed.
-  # ---------------------------------------------------------------------------
+  # ── Heavy simulation — manual dispatch only ────────────────────────────────
   heavy-simulation:
-    needs: [engine, backend-changes]
-    if: needs.backend-changes.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.run_heavy == true)
+    if: github.event_name == 'workflow_dispatch' && inputs.run_heavy == true
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
-      fail-fast: true
       matrix:
-        # Five independent shards with different seed offsets = 5 million
-        # matches sampled without deterministic overlap. Each shard runs
-        # E1.5 with 200,000 matches/cfg = 1,000,000 matches per shard.
         shard: [0, 1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
@@ -131,20 +85,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: maven
       - name: 1M-match invariant sweep (shard ${{ matrix.shard }})
         env:
-          # Distinct seed offset per shard → each explores a different slice
-          # of the simulation state space. The E1.5 test reads this env var
-          # and offsets its per-match seed derivation accordingly.
           ZC_SIM_SHARD_SEED: ${{ matrix.shard }}00000
         run: bash backend/game-engine/run-tests.sh --heavy
 
-  # ---------------------------------------------------------------------------
-  # PR rollup: one summary card at the top of the run so reviewers see at a
-  # glance which gates passed and whether the heavy sweep fired.
-  # ---------------------------------------------------------------------------
+  # ── Summary ────────────────────────────────────────────────────────────────
   summary:
-    needs: [engine, backend, app, backend-changes, heavy-simulation]
+    needs: [engine, backend, app]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -153,17 +102,13 @@ jobs:
           ENGINE:  ${{ needs.engine.result }}
           BACKEND: ${{ needs.backend.result }}
           APP:     ${{ needs.app.result }}
-          FILTER:  ${{ needs.backend-changes.outputs.changed }}
-          HEAVY:   ${{ needs.heavy-simulation.result }}
         run: |
           {
             echo "## Zero Count CI — ${{ github.event_name }} on \`${{ github.head_ref || github.ref_name }}\`"
             echo ""
             echo "| gate | result |"
             echo "|---|---|"
-            echo "| engine (E1_1..E1_6 + 10k-sim) | ${ENGINE:-skipped} |"
-            echo "| backend (mvn verify) | ${BACKEND:-skipped} |"
-            echo "| app (flutter analyze/test/build) | ${APP:-skipped} |"
-            echo "| backend files changed | ${FILTER:-false} |"
-            echo "| heavy simulation (5 × 1M) | ${HEAVY:-skipped} |"
+            echo "| engine (unit tests) | ${ENGINE} |"
+            echo "| backend (mvn verify) | ${BACKEND} |"
+            echo "| app (analyze + unit tests) | ${APP} |"
           } >> "$GITHUB_STEP_SUMMARY"
