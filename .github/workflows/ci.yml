@@ -12,8 +12,28 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - 'feat/**'
+      - 'fix/**'
+      - 'chore/**'
   pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_heavy:
+        description: 'Force the 1M-match heavy simulation sweep even on frontend-only changes'
+        type: boolean
+        default: false
+  merge_group:
+
+# Cancel superseded runs on the same branch/PR to save minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   engine:
@@ -85,7 +105,7 @@ jobs:
   # ---------------------------------------------------------------------------
   heavy-simulation:
     needs: [engine, backend-changes]
-    if: needs.backend-changes.outputs.changed == 'true'
+    if: needs.backend-changes.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.run_heavy == true)
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
@@ -108,3 +128,32 @@ jobs:
           # and offsets its per-match seed derivation accordingly.
           ZC_SIM_SHARD_SEED: ${{ matrix.shard }}00000
         run: bash backend/game-engine/run-tests.sh --heavy
+
+  # ---------------------------------------------------------------------------
+  # PR rollup: one summary card at the top of the run so reviewers see at a
+  # glance which gates passed and whether the heavy sweep fired.
+  # ---------------------------------------------------------------------------
+  summary:
+    needs: [engine, backend, app, backend-changes, heavy-simulation]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build summary
+        env:
+          ENGINE:  ${{ needs.engine.result }}
+          BACKEND: ${{ needs.backend.result }}
+          APP:     ${{ needs.app.result }}
+          FILTER:  ${{ needs.backend-changes.outputs.changed }}
+          HEAVY:   ${{ needs.heavy-simulation.result }}
+        run: |
+          {
+            echo "## Zero Count CI — ${{ github.event_name }} on \`${{ github.head_ref || github.ref_name }}\`"
+            echo ""
+            echo "| gate | result |"
+            echo "|---|---|"
+            echo "| engine (E1_1..E1_6 + 10k-sim) | ${ENGINE:-skipped} |"
+            echo "| backend (mvn verify) | ${BACKEND:-skipped} |"
+            echo "| app (flutter analyze/test/build) | ${APP:-skipped} |"
+            echo "| backend files changed | ${FILTER:-false} |"
+            echo "| heavy simulation (5 × 1M) | ${HEAVY:-skipped} |"
+          } >> "$GITHUB_STEP_SUMMARY"
