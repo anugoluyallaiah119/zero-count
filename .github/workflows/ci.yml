@@ -76,6 +76,15 @@ jobs:
       - name: tests (incl. Dart engine parity + 500-match sim)
         working-directory: app
         run: flutter test
+      - name: Upload golden failure diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-failures-${{ github.run_id }}
+          path: |
+            app/test/failures/**
+          if-no-files-found: ignore
+          retention-days: 14
       - name: web build
         working-directory: app
         run: flutter build web --release
