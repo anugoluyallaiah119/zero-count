@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../engine/ai.dart';
 import '../../engine/model.dart' as eng;
+import '../../engine/scoring.dart' as eng;
 import '../../engine/session.dart';
 import '../../shared/sfx/sfx_service.dart';
 import '../../ui/zc_playing_card.dart';

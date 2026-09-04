@@ -99,12 +99,13 @@ public class ChallengeService implements MatchHook {
             INSERT INTO daily_challenge_progress (user_id, challenge_id, progress)
             SELECT ?, ?, ?
             WHERE EXISTS (SELECT 1 FROM daily_challenges WHERE id = ? AND type = ?)
+              AND EXISTS (SELECT 1 FROM users WHERE id = ?)
             ON CONFLICT (user_id, challenge_id) DO UPDATE
             SET progress = daily_challenge_progress.progress + ?
             WHERE EXISTS (SELECT 1 FROM daily_challenges
                           WHERE id = ? AND type = ?)
               AND NOT daily_challenge_progress.claimed
-            """, userId, id, delta, id, type, delta, id, type);
+            """, userId, id, delta, id, type, userId, delta, id, type);
     }
 
     /** Claim today's reward. Idempotent. */

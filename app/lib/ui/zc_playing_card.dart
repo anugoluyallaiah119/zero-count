@@ -58,6 +58,7 @@ class ZcPlayingCard extends StatelessWidget {
     required this.rank,
     required this.suit,
     required this.value,
+    this.isSpecial = false,
     this.width = 52,
     this.selected = false,
     this.faceDown = false,
@@ -256,7 +257,7 @@ class ZcGroupedCardStack extends StatelessWidget {
     this.onCardTap,
   });
 
-  final List<({int id, String rank, ZcSuit suit, int value})> cards;
+  final List<({int id, String rank, ZcSuit suit, int value, bool isSpecial})> cards;
   final double cardWidth;
   final int? selectedCardId;
   final ValueChanged<int>? onCardTap;

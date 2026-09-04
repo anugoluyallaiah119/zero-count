@@ -47,9 +47,17 @@ public class WinStreakService implements MatchHook {
     @Transactional
     public void onMatchEnded(List<UUID> seats, int winnerIdx, List<Integer> totals) {
         UUID winner = seats.get(winnerIdx);
-        for (int i = 0; i < seats.size(); i++) {
+        // Ignore seats that aren't in `users` (test contexts with fake opponents).
+        List<UUID> real = new java.util.ArrayList<>();
+        for (UUID seat : seats) {
+            Integer n = db.queryForObject(
+                "SELECT count(*) FROM users WHERE id = ?", Integer.class, seat);
+            if (n != null && n > 0) real.add(seat);
+        }
+        if (real.isEmpty() || !real.contains(winner)) return;
+        for (UUID seat : real) {
             db.update("INSERT INTO statistics (user_id) VALUES (?) "
-                + "ON CONFLICT (user_id) DO NOTHING", seats.get(i));
+                + "ON CONFLICT (user_id) DO NOTHING", seat);
         }
         // Winner's streak grows; best_win_streak tracks the peak.
         db.update("""
@@ -58,11 +66,10 @@ public class WinStreakService implements MatchHook {
                    best_win_streak = GREATEST(best_win_streak, win_streak + 1)
              WHERE user_id = ?
             """, winner);
-        // Losers reset.
-        for (int i = 0; i < seats.size(); i++) {
-            if (i == winnerIdx) continue;
-            db.update("UPDATE statistics SET win_streak = 0 WHERE user_id = ?",
-                seats.get(i));
+        // Losers reset (only real users).
+        for (UUID seat : real) {
+            if (seat.equals(winner)) continue;
+            db.update("UPDATE statistics SET win_streak = 0 WHERE user_id = ?", seat);
         }
         Integer newStreak = db.queryForObject(
             "SELECT win_streak FROM statistics WHERE user_id = ?",

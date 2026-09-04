@@ -31,6 +31,9 @@ public class PlayerModelService implements MatchHook {
     @Transactional
     public void onMatchEnded(List<UUID> seats, int winnerIdx, List<Integer> totals) {
         for (UUID seat : seats) {
+            Integer n = db.queryForObject(
+                "SELECT count(*) FROM users WHERE id = ?", Integer.class, seat);
+            if (n == null || n == 0) continue; // skip test-only fake seats
             db.update("INSERT INTO player_gameplay_profile (user_id) VALUES (?) "
                 + "ON CONFLICT (user_id) DO NOTHING", seat);
             rebuild(seat);

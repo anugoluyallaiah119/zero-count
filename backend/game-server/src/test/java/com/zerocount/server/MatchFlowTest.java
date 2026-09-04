@@ -194,7 +194,9 @@ class MatchFlowTest extends EmbeddedPostgresSupport {
         // Public state: two players, current turn visible.
         Map<String, Object> stateA = a.awaitTopic("state");
         Map<String, Object> state = (Map<String, Object>) stateA.get("state");
-        assertThat((Integer) state.get("stockSize")).isEqualTo(52 - 14 - 1);
+        // V2.2: 2p×7c deck = 52 normal + 1 Special = 53 total.
+        // Dealt: 2 players × 7 cards + 1 visible discard = 15. Stock = 53 − 15 = 38.
+        assertThat((Integer) state.get("stockSize")).isEqualTo(53 - 14 - 1);
         List<Map<String, Object>> players = (List<Map<String, Object>>) state.get("players");
         assertThat(players).hasSize(2);
 

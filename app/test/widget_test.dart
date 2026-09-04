@@ -63,6 +63,8 @@ class FakeProfileRepository implements ProfileRepository {
     bestCount: 0,
     streakDays: 3,
     elo: 1315,
+    winStreak: 0,
+    bestWinStreak: 0,
   );
   String? patchedName;
 
@@ -85,6 +87,8 @@ class FakeProfileRepository implements ProfileRepository {
       bestCount: profile.bestCount,
       streakDays: profile.streakDays,
       elo: profile.elo,
+      winStreak: profile.winStreak,
+      bestWinStreak: profile.bestWinStreak,
     );
     return profile;
   }
@@ -182,6 +186,8 @@ void main() {
       bestCount: 0,
       streakDays: 6,
       elo: 1420,
+      winStreak: 0,
+      bestWinStreak: 0,
     );
     await tester.pumpWidget(app());
     await reachOtp(tester);
