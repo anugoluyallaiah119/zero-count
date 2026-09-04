@@ -7,6 +7,7 @@ import '../../ui/zc_header.dart';
 import '../../ui/zc_theme.dart';
 import '../auth/avatar_catalog.dart';
 import '../player/profile_repository.dart';
+import 'challenge_repository.dart';
 import 'contest_repository.dart';
 
 /// Events hub — Daily / Weekly / Monthly / Sponsored tabs (Phase 2 mockups).
@@ -391,6 +392,7 @@ class _EventDef {
     required this.color,
     this.unlockIn,
     this.barColor = const Color(0xFF9B30FF),
+    this.onTap,
   });
 
   final String icon;
@@ -404,6 +406,7 @@ class _EventDef {
   final Color color;
   final String? unlockIn;
   final Color barColor;
+  final VoidCallback? onTap;
 }
 
 class _EventCard extends StatelessWidget {
@@ -525,7 +528,9 @@ class _EventCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Container(
+                  GestureDetector(
+                    onTap: locked ? null : def.onTap,
+                    child: Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
                     decoration: BoxDecoration(
@@ -555,7 +560,8 @@ class _EventCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ),
+                  ), // Container
+                  ), // GestureDetector
                   if (locked) ...[
                     const SizedBox(height: 3),
                     Text(
@@ -706,12 +712,22 @@ class _ProgressStrip extends StatelessWidget {
   }
 }
 
-class _DailyTab extends StatelessWidget {
+class _DailyTab extends ConsumerWidget {
   const _DailyTab();
 
   @override
-  Widget build(BuildContext context) {
-    return const Column(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(dailyChallengeProvider);
+    // Countdown to midnight UTC.
+    final now = DateTime.now().toUtc();
+    final midnight = DateTime.utc(now.year, now.month, now.day + 1);
+    final left = midnight.difference(now);
+    final chipValue =
+        '${left.inHours.toString().padLeft(2, '0')}h '
+        ': ${(left.inMinutes % 60).toString().padLeft(2, '0')}m '
+        ': ${(left.inSeconds % 60).toString().padLeft(2, '0')}s';
+
+    return Column(
       children: [
         _Hero(
           title: 'DAILY EVENTS',
@@ -719,78 +735,75 @@ class _DailyTab extends StatelessWidget {
           line2Prefix: 'New events ',
           accent: 'everyday!',
           chipLabel: 'REFRESHES IN',
-          chipValue: '09h : 42m : 15s',
+          chipValue: chipValue,
           art: 'assets/art/hero_daily.png',
         ),
+        async.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 32),
+            child: CircularProgressIndicator(color: Color(0xFF7B2FE0)),
+          ),
+          error: (_, __) => const SizedBox.shrink(),
+          data: (c) => _LiveDailyCard(challenge: c, ref: ref),
+        ),
+      ],
+    );
+  }
+}
+
+class _LiveDailyCard extends StatelessWidget {
+  const _LiveDailyCard({required this.challenge, required this.ref});
+  final DailyChallenge challenge;
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = challenge;
+    final action = c.claimed
+        ? 'CLAIMED'
+        : c.canClaim
+            ? 'CLAIM'
+            : c.progress > 0
+                ? 'CONTINUE'
+                : 'PLAY NOW';
+
+    return Column(
+      children: [
         _EventCard(
-            def: _EventDef(
-                icon: 'assets/art/ev_card_fan.png',
-                title: 'DAILY PLAY',
-                desc: 'Play 3 matches today',
-                progress: 2,
-                total: 3,
-                coins: 150,
-                gems: 10,
-                action: 'CONTINUE',
-                color: Color(0xFF7B2FE0))),
-        _EventCard(
-            def: _EventDef(
-                icon: 'assets/art/ev_people.png',
-                title: 'GROUP MASTER',
-                desc: 'Make 4 groups in any match',
-                progress: 3,
-                total: 4,
-                coins: 200,
-                gems: 15,
-                action: 'GO NOW',
-                color: Color(0xFF1565E8),
-                barColor: Color(0xFF2EC5F6))),
-        _EventCard(
-            def: _EventDef(
-                icon: 'assets/art/ev_flame_zero.png',
-                title: 'ZERO STREAK',
-                desc: 'Win 2 matches today',
-                progress: 1,
-                total: 2,
-                coins: 250,
-                gems: 20,
-                action: 'PLAY NOW',
-                color: Color(0xFFE88A15),
-                barColor: Color(0xFFF9A809))),
-        _EventCard(
-            def: _EventDef(
-                icon: 'assets/art/ev_stopwatch.png',
-                title: 'SPEED ROUND',
-                desc: 'Win 1 match under 5 minutes',
-                progress: 0,
-                total: 1,
-                coins: 150,
-                gems: 10,
-                action: 'LOCKED',
-                color: Color(0xFF18B84A),
-                unlockIn: 'Unlocks in 02h 12m',
-                barColor: Color(0xFF2EEA6A))),
-        _EventCard(
-            def: _EventDef(
-                icon: 'assets/art/ev_crystal_zero.png',
-                title: 'DAILY ZERO',
-                desc: 'Score Zero Count in 1 round',
-                progress: 0,
-                total: 1,
-                coins: 300,
-                gems: 25,
-                action: 'LOCKED',
-                color: Color(0xFF7B2FE0),
-                unlockIn: 'Unlocks in 06h 12m')),
+          def: _EventDef(
+            icon: c.icon,
+            title: c.title,
+            desc: c.description,
+            progress: c.progress,
+            total: c.target,
+            coins: c.reward,
+            gems: 0,
+            action: action,
+            color: const Color(0xFF7B2FE0),
+            onTap: c.canClaim
+                ? () async {
+                    await ref
+                        .read(challengeRepositoryProvider)
+                        .claim();
+                    ref.invalidate(dailyChallengeProvider);
+                    // Refresh coins on home.
+                    ref.invalidate(profileProvider);
+                  }
+                : null,
+          ),
+        ),
         _ProgressStrip(
-          count: '3',
+          count: c.claimed ? '1' : '0',
           countLabel: 'COMPLETED',
           title: 'DAILY PROGRESS',
-          subtitle: 'Complete more events to unlock bonus rewards!',
+          subtitle: c.claimed
+              ? 'Come back tomorrow for a new challenge!'
+              : 'Complete the challenge to earn your reward!',
           milestones: [
-            (asset: 'assets/art/gem.png', value: '15', done: true),
-            (asset: 'assets/art/coin.png', value: '300', done: true),
-            (asset: 'assets/art/sp_reverse.png', value: '1', done: true),
+            (asset: 'assets/art/coin.png',
+             value: '${c.reward}',
+             done: c.claimed),
+            (asset: 'assets/art/gem.png', value: '10', done: false),
             (asset: 'assets/art/gift_box.png', value: '1', done: false),
           ],
         ),
@@ -1244,58 +1257,85 @@ class _LiveTournamentsBanner extends ConsumerWidget {
   }
 }
 
-class _SponsoredTab extends StatelessWidget {
+class _SponsoredTab extends ConsumerWidget {
   const _SponsoredTab();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final contestsAsync = ref.watch(activeContestsProvider);
+    // Countdown to end of first live sponsored contest (or generic 5d).
+    String chipValue = '05d : 12h : 18m';
+    final liveSponsored = contestsAsync.valueOrNull
+        ?.where((c) => c.sponsor != null && c.isLive)
+        .toList();
+    if (liveSponsored != null && liveSponsored.isNotEmpty) {
+      final left = liveSponsored.first.timeLeft;
+      chipValue =
+          '${left.inDays}d : ${(left.inHours % 24).toString().padLeft(2, '0')}h'
+          ' : ${(left.inMinutes % 60).toString().padLeft(2, '0')}m';
+    }
+
     return Column(
       children: [
-        const _Hero(
+        _Hero(
           title: 'SPONSORED EVENTS',
           line1: 'Play with top brands.',
           line2Prefix: 'Win ',
           accent: 'real-world rewards!',
           chipLabel: 'REFRESHES IN',
-          chipValue: '05d : 12h : 18m',
+          chipValue: chipValue,
           art: 'assets/art/hero_sponsored.png',
         ),
-        _sponsoredBrandCard(
-          brandLogo: 'assets/art/brand_swiggy.png',
-          brandName: 'Swiggy',
-          title: 'SWIGGY FOOD FEST',
-          desc: 'Win matches to get ₹100 Swiggy vouchers & special discount codes!',
-          action: 'PLAY NOW',
-          color: const Color(0xFFFC8019),
-          voucher: '₹100 Voucher',
-        ),
-        _sponsoredBrandCard(
-          brandLogo: 'assets/art/brand_boat.png',
-          brandName: 'boAt',
-          title: 'BOAT BEAT CHALLENGE',
-          desc: 'Score top in weekly leaderboard to win boAt Airdopes & headphones!',
-          action: 'JOIN NOW',
-          color: const Color(0xFFE50914),
-          voucher: 'boAt Airdopes',
-        ),
-        _sponsoredBrandCard(
-          brandLogo: 'assets/art/brand_sprite.png',
-          brandName: 'Sprite',
-          title: 'CLEAR HAI REFRESH',
-          desc: 'Score 5 Zero Counts today and get exciting merch coupons!',
-          action: 'GO NOW',
-          color: const Color(0xFF008B45),
-          voucher: 'Merch Coupon',
-        ),
-        _sponsoredBrandCard(
-          brandLogo: 'assets/art/brand_intel.png',
-          brandName: 'Intel',
-          title: 'INTEL GAMER DAYS',
-          desc: 'Play ranked matches to qualify for Intel Gaming Grand Finals!',
-          action: 'REGISTER',
-          color: const Color(0xFF0071C5),
-          voucher: 'Grand Pass',
-        ),
+        // Live sponsored contests from backend; fall back to static cards.
+        if (liveSponsored != null && liveSponsored.isNotEmpty)
+          ...liveSponsored.map((c) => _sponsoredBrandCard(
+                brandLogo: 'assets/art/brand_swiggy.png', // generic fallback icon
+                brandName: c.sponsor ?? 'Sponsor',
+                title: c.title.toUpperCase(),
+                desc: 'Play & win with ${c.sponsor}!',
+                action: 'JOIN NOW',
+                color: const Color(0xFF7B2FE0),
+                voucher: 'Prize',
+                onTap: () => context.push('/tournaments'),
+              ))
+        else ...[
+          _sponsoredBrandCard(
+            brandLogo: 'assets/art/brand_swiggy.png',
+            brandName: 'Swiggy',
+            title: 'SWIGGY FOOD FEST',
+            desc: 'Win matches to get ₹100 Swiggy vouchers & special discount codes!',
+            action: 'PLAY NOW',
+            color: const Color(0xFFFC8019),
+            voucher: '₹100 Voucher',
+          ),
+          _sponsoredBrandCard(
+            brandLogo: 'assets/art/brand_boat.png',
+            brandName: 'boAt',
+            title: 'BOAT BEAT CHALLENGE',
+            desc: 'Score top in weekly leaderboard to win boAt Airdopes & headphones!',
+            action: 'JOIN NOW',
+            color: const Color(0xFFE50914),
+            voucher: 'boAt Airdopes',
+          ),
+          _sponsoredBrandCard(
+            brandLogo: 'assets/art/brand_sprite.png',
+            brandName: 'Sprite',
+            title: 'CLEAR HAI REFRESH',
+            desc: 'Score 5 Zero Counts today and get exciting merch coupons!',
+            action: 'GO NOW',
+            color: const Color(0xFF008B45),
+            voucher: 'Merch Coupon',
+          ),
+          _sponsoredBrandCard(
+            brandLogo: 'assets/art/brand_intel.png',
+            brandName: 'Intel',
+            title: 'INTEL GAMER DAYS',
+            desc: 'Play ranked matches to qualify for Intel Gaming Grand Finals!',
+            action: 'REGISTER',
+            color: const Color(0xFF0071C5),
+            voucher: 'Grand Pass',
+          ),
+        ],
       ],
     );
   }
@@ -1308,8 +1348,11 @@ class _SponsoredTab extends StatelessWidget {
     required String action,
     required Color color,
     required String voucher,
+    VoidCallback? onTap,
   }) {
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1406,6 +1449,7 @@ class _SponsoredTab extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ), // Container
+    ); // GestureDetector
   }
 }

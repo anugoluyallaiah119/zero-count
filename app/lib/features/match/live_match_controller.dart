@@ -194,6 +194,8 @@ class LiveMatchController extends Notifier<LiveMatchState?> {
       next = next.copyWith(roundResult: () => j);
     } else if (type == 'match_ended') {
       next = next.copyWith(matchResult: () => j, over: true);
+      // Refresh coins + stats on home/profile after any match ends.
+      ref.invalidate(profileProvider);
     }
     state = next;
   }
