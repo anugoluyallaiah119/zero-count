@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 
 import '../auth/auth_controller.dart';
 import '../auth/avatar_catalog.dart';
+import '../game/game_screen.dart' show MatchCompletedScreen;
 import '../game/play_area_table.dart';
 import '../game/play_area_theme.dart';
 import '../room/room_repository.dart';
@@ -711,167 +712,66 @@ class _LiveMatchOverOverlay extends StatelessWidget {
   final VoidCallback onRematch;
   final VoidCallback onLeave;
 
+  static const _avatarAssets = [
+    'assets/art/play_area_avatar_1.png',
+    'assets/art/play_area_avatar_2.png',
+    'assets/art/play_area_avatar_3.png',
+  ];
+
   @override
   Widget build(BuildContext context) {
     final winnerId = result['winnerId']?.toString();
     final totals = (result['totals'] as List? ?? const [])
         .map((e) => (e as num).toInt())
         .toList();
-    final iWon = winnerId != null && winnerId == myUserId;
-    final nearMiss = result['nearMiss'] == true;
-    final message = result['message']?.toString();
+    final target = (result['target'] as num?)?.toInt() ?? 100;
+
+    // Build standings from live seats + totals
+    final List<({int playerIdx, String name, int score, String avatar, bool isYou})> standings = [];
+    for (var i = 0; i < seats.length; i++) {
+      final seat = seats[i];
+      standings.add((
+        playerIdx: i,
+        name: seat.name.isNotEmpty ? seat.name : 'Player ${i + 1}',
+        score: i < totals.length ? totals[i] : 0,
+        avatar: seat.equippedAvatar.isNotEmpty
+            ? seat.equippedAvatar
+            : _avatarAssets[i % _avatarAssets.length],
+        isYou: seat.id == myUserId,
+      ));
+    }
+    standings.sort((a, b) => a.score.compareTo(b.score));
+
+    final youRank = standings.indexWhere((p) => p.isYou) + 1;
+    final earnedCoins = youRank == 1 ? 120 : (youRank == 2 ? 40 : (youRank == 3 ? -20 : -40));
+    final earnedGems = youRank == 1 ? 2 : 0;
 
     return Positioned.fill(
-      child: ColoredBox(
-        color: Colors.black.withValues(alpha: 0.72),
-        child: Center(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 24),
-            padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1A0B3D), Color(0xFF0A0522)],
-              ),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                color: iWon ? const Color(0xFFFDE047) : const Color(0xFFA855F7),
-                width: 1.6,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: (iWon
-                          ? const Color(0xFFFDE047)
-                          : const Color(0xFFA855F7))
-                      .withValues(alpha: 0.28),
-                  blurRadius: 30,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  iWon ? 'YOU WIN!' : 'MATCH OVER',
-                  style: TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.8,
-                    color: iWon
-                        ? const Color(0xFFFDE047)
-                        : Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Score list per seat.
-                for (var i = 0; i < seats.length && i < totals.length; i++)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          seats[i].id == myUserId
-                              ? 'You'
-                              : 'Player ${i + 1}',
-                          style: TextStyle(
-                            fontFamily: 'Nunito',
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: seats[i].id == winnerId
-                                ? const Color(0xFFFDE047)
-                                : Colors.white70,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          '${totals[i]} pts',
-                          style: TextStyle(
-                            fontFamily: 'Nunito',
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
-                            color: seats[i].id == winnerId
-                                ? const Color(0xFFFDE047)
-                                : Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                if (nearMiss && message != null) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    message,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFFFDE047),
-                    ),
-                  ),
-                ],
-                if (streakBonus != null && streakBonus!['userId'] == myUserId) ...[
-                  const SizedBox(height: 12),
-                  _StreakBonusBadge(
-                    streak: (streakBonus!['streak'] as num?)?.toInt() ?? 0,
-                    coins: (streakBonus!['bonusCoins'] as num?)?.toInt() ?? 0,
-                  ),
-                ],
-                const SizedBox(height: 18),
-                // Rematch counter pill.
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: const Color(0x33D946CB),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xFFD946CB),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    '$rematchVotes/$rematchSeats ready',
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.8,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _OverBtn(
-                        label: iVoted ? 'READY ✓' : 'REMATCH',
-                        primary: !iVoted,
-                        onTap: iVoted ? null : onRematch,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _OverBtn(
-                        label: 'LEAVE',
-                        primary: false,
-                        onTap: onLeave,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+      child: MatchCompletedScreen(
+        isMatchEnd: true,
+        roundNumber: 0,
+        targetScore: target,
+        standings: standings,
+        youRank: youRank < 1 ? standings.length : youRank,
+        earnedCoins: earnedCoins,
+        earnedGems: earnedGems,
+        onShare: () => ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Results copied!'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFF7B2FE0),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         ),
+        onPrimaryAction: onRematch,
+        primaryLabel: rematchVotes > 0
+            ? 'REMATCH ($rematchVotes/$rematchSeats)'
+            : 'PLAY AGAIN',
       ),
     );
   }
+}
+
 }
 
 class _OverBtn extends StatelessWidget {

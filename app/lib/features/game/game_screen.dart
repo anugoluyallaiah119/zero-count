@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../engine/ai.dart';
 import '../../engine/model.dart' as eng;
+import '../../ui/zc_cosmetics.dart';
 import '../../engine/scoring.dart' as eng;
 import '../../engine/session.dart';
 import '../../shared/sfx/sfx_service.dart';
@@ -494,11 +495,8 @@ class _ResultsAnnouncementOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalScores = isMatchEnd
-        ? matchResult!.totals
-        : roundResult!.totals;
+    final totalScores = isMatchEnd ? matchResult!.totals : roundResult!.totals;
 
-    // Rank players by lowest cumulative score
     final List<({int playerIdx, String name, int score, String avatar, bool isYou})> standings = [];
     for (var i = 0; i < names.length; i++) {
       standings.add((
@@ -513,456 +511,387 @@ class _ResultsAnnouncementOverlay extends StatelessWidget {
 
     final youRank = standings.indexWhere((p) => p.isYou) + 1;
     final youWon = youRank == 1;
-
-    final earnedCoins = youWon ? 120 : (youRank == 2 ? 40 : -20);
+    final earnedCoins = youWon ? 120 : (youRank == 2 ? 40 : (youRank == 3 ? -20 : -40));
     final earnedGems = youWon ? 2 : 0;
 
+    return MatchCompletedScreen(
+      isMatchEnd: isMatchEnd,
+      roundNumber: roundNumber,
+      targetScore: targetScore,
+      standings: standings,
+      youRank: youRank,
+      earnedCoins: earnedCoins,
+      earnedGems: earnedGems,
+      onShare: () => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Results copied!'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFF7B2FE0),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+      onPrimaryAction: isMatchEnd ? onPlayAgain : onNextRound,
+      primaryLabel: isMatchEnd ? 'PLAY AGAIN' : 'NEXT ROUND ▶',
+    );
+  }
+}
+
+// ============================================================================
+// MATCH COMPLETED SCREEN — pixel-matched to mockup
+// ============================================================================
+
+typedef _Standing = ({int playerIdx, String name, int score, String avatar, bool isYou});
+
+class MatchCompletedScreen extends StatelessWidget {
+  const MatchCompletedScreen({
+    super.key,
+    required this.isMatchEnd,
+    required this.roundNumber,
+    required this.targetScore,
+    required this.standings,
+    required this.youRank,
+    required this.earnedCoins,
+    required this.earnedGems,
+    required this.onShare,
+    required this.onPrimaryAction,
+    required this.primaryLabel,
+  });
+
+  final bool isMatchEnd;
+  final int roundNumber;
+  final int targetScore;
+  final List<_Standing> standings;
+  final int youRank;
+  final int earnedCoins;
+  final int earnedGems;
+  final VoidCallback onShare;
+  final VoidCallback onPrimaryAction;
+  final String primaryLabel;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      color: Colors.black.withValues(alpha: 0.82),
+      // Full-screen dark bg matching mockup
+      decoration: const BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment(0, -0.3),
+          radius: 1.2,
+          colors: [Color(0xFF1A0B3D), Color(0xFF08031A)],
+        ),
+      ),
       child: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 1. Golden Crown + Laurel Header Banner
-                  Stack(
-                    alignment: Alignment.center,
-                    clipBehavior: Clip.none,
-                    children: [
-                      // Laurel Garland Badge
-                      Container(
-                        margin: const EdgeInsets.only(top: 24),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Color(0xFF6B21A8), Color(0xFF3B0764)],
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              children: [
+                // ── Crown + Badge header ──────────────────────────────────
+                Stack(
+                  alignment: Alignment.topCenter,
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Purple badge container
+                    Container(
+                      margin: const EdgeInsets.only(top: 28),
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0xFF5B21B6), Color(0xFF3B0764)],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFA855F7), width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFA855F7).withValues(alpha: 0.4),
+                            blurRadius: 28,
+                            spreadRadius: 2,
                           ),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: const Color(0xFFA855F7), width: 1.5),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFA855F7).withValues(alpha: 0.5),
-                              blurRadius: 24,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const SizedBox(height: 12),
-                            Text(
-                              isMatchEnd ? 'MATCH COMPLETED!' : 'ROUND $roundNumber COMPLETED!',
-                              style: const TextStyle(
-                                fontFamily: 'Nunito',
-                                fontSize: 21,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.8,
-                                color: Colors.white,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 2),
-                            const Text(
-                              '◆',
-                              style: TextStyle(color: Color(0xFFA855F7), fontSize: 10),
-                            ),
-                          ],
-                        ),
+                        ],
                       ),
-
-                      // Golden Crown Floater
-                      Positioned(
-                        top: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Color(0x88FDE047),
-                                blurRadius: 18,
-                              ),
-                            ],
-                          ),
-                          child: const Text('👑', style: TextStyle(fontSize: 38)),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // 2. Target Score Capsule
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0x991E0B42),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0x33A855F7)),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'TARGET SCORE',
-                          style: TextStyle(
-                            fontFamily: 'Nunito',
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.8,
-                            color: Colors.white70,
-                          ),
-                        ),
-                        Text(
-                          '$targetScore',
-                          style: const TextStyle(
-                            fontFamily: 'Nunito',
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFFFDE047),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // 3. Standings Table Card
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xD912062E),
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: const Color(0x558B5CF6), width: 1.2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0x338B5CF6),
-                          blurRadius: 20,
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Header Row
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                          child: Row(
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 14),
+                          // Laurel + MATCH COMPLETED text
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              SizedBox(width: 32),
-                              Expanded(
-                                flex: 4,
-                                child: Text(
-                                  'PLAYER',
-                                  style: TextStyle(
-                                    fontFamily: 'Nunito',
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.8,
-                                    color: Colors.white54,
+                              const Text('🌿', style: TextStyle(fontSize: 20)),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: ShaderMask(
+                                  shaderCallback: (b) => const LinearGradient(
+                                    colors: [Color(0xFFFDE047), Color(0xFFFBBF24), Color(0xFFFFFFFF)],
+                                  ).createShader(b),
+                                  child: Text(
+                                    isMatchEnd
+                                        ? 'MATCH COMPLETED!'
+                                        : 'ROUND $roundNumber COMPLETED!',
+                                    style: const TextStyle(
+                                      fontFamily: 'Nunito',
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                      color: Colors.white,
+                                    ),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ),
                               ),
-                              Expanded(
-                                flex: 3,
-                                child: Text(
-                                  'FINAL SCORE',
-                                  style: TextStyle(
-                                    fontFamily: 'Nunito',
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.8,
-                                    color: Colors.white54,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                              Expanded(
-                                flex: 3,
-                                child: Text(
-                                  'RESULT',
-                                  style: TextStyle(
-                                    fontFamily: 'Nunito',
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.8,
-                                    color: Colors.white54,
-                                  ),
-                                  textAlign: TextAlign.end,
-                                ),
-                              ),
+                              const SizedBox(width: 8),
+                              const Text('🌿', style: TextStyle(fontSize: 20)),
                             ],
                           ),
-                        ),
-                        const Divider(color: Color(0x22FFFFFF), height: 12),
-
-                        // Player Rows
-                        for (var rank = 0; rank < standings.length; rank++)
-                          _buildPlayerRow(
-                            rank: rank + 1,
-                            player: standings[rank],
-                            isWinner: rank == 0,
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // 4. Rewards Section
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('🌿 ', style: TextStyle(fontSize: 12)),
-                      Text(
-                        'REWARDS',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
-                          color: const Color(0xFFC084FC),
-                        ),
-                      ),
-                      const Text(' 🌿', style: TextStyle(fontSize: 12)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Coins Reward Card
-                      _buildRewardCard(
-                        iconWidget: Image.asset(
-                          'assets/art/coin.png',
-                          width: 32,
-                          height: 32,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.monetization_on_rounded,
-                            color: Color(0xFFFDE047),
-                            size: 32,
-                          ),
-                        ),
-                        label: 'COINS',
-                        value: earnedCoins >= 0 ? '+$earnedCoins' : '$earnedCoins',
-                        isPositive: earnedCoins >= 0,
-                      ),
-                      const SizedBox(width: 14),
-
-                      // Gems Reward Card
-                      _buildRewardCard(
-                        iconWidget: Image.asset(
-                          'assets/art/gem.png',
-                          width: 32,
-                          height: 32,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.diamond_rounded,
-                            color: Color(0xFFC084FC),
-                            size: 32,
-                          ),
-                        ),
-                        label: 'GEMS',
-                        value: '+$earnedGems',
-                        isPositive: true,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-
-                  // 5. Bottom Action Buttons
-                  Row(
-                    children: [
-                      // SHARE Button
-                      Expanded(
-                        flex: 4,
-                        child: GestureDetector(
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Results copied to share!'),
-                                behavior: SnackBarBehavior.floating,
-                                backgroundColor: const Color(0xFF7B2FE0),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            height: 46,
+                          const SizedBox(height: 10),
+                          // TARGET SCORE box
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF581C87), Color(0xFF3B0764)],
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0x44A855F7)),
+                              color: const Color(0x441E0B42),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0x55A855F7)),
                             ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                            child: Column(
                               children: [
-                                Icon(Icons.ios_share_rounded, color: Colors.white, size: 16),
-                                SizedBox(width: 6),
-                                Text(
-                                  'SHARE',
+                                const Text(
+                                  'TARGET SCORE',
                                   style: TextStyle(
                                     fontFamily: 'Nunito',
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 0.6,
-                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1.2,
+                                    color: Colors.white60,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-
-                      // PLAY AGAIN or NEXT ROUND Button
-                      Expanded(
-                        flex: 6,
-                        child: GestureDetector(
-                          onTap: isMatchEnd ? onPlayAgain : onNextRound,
-                          child: Container(
-                            height: 46,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF22C55E), Color(0xFF16A34A)],
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF22C55E).withValues(alpha: 0.4),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
                                 Text(
-                                  isMatchEnd ? 'REMATCH' : 'NEXT ROUND ▶',
+                                  '$targetScore',
                                   style: const TextStyle(
                                     fontFamily: 'Nunito',
-                                    fontSize: 13.5,
+                                    fontSize: 22,
                                     fontWeight: FontWeight.w900,
-                                    letterSpacing: 0.6,
-                                    color: Colors.white,
+                                    color: Color(0xFFFDE047),
                                   ),
                                 ),
                               ],
                             ),
                           ),
+                        ],
+                      ),
+                    ),
+                    // Floating crown at top
+                    Positioned(
+                      top: 0,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          boxShadow: [BoxShadow(color: Color(0xAAFDE047), blurRadius: 20)],
+                        ),
+                        child: const Text('👑', style: TextStyle(fontSize: 42)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // ── Results table ─────────────────────────────────────────
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xCC0F062A),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0x448B5CF6), width: 1.2),
+                  ),
+                  child: Column(
+                    children: [
+                      // Header row
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+                        child: Row(
+                          children: const [
+                            SizedBox(width: 38),
+                            Expanded(flex: 4, child: Text('PLAYER', style: TextStyle(fontFamily: 'Nunito', fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: Colors.white38))),
+                            Expanded(flex: 3, child: Text('FINAL SCORE', style: TextStyle(fontFamily: 'Nunito', fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: Colors.white38), textAlign: TextAlign.center)),
+                            Expanded(flex: 3, child: Text('RESULT', style: TextStyle(fontFamily: 'Nunito', fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: Colors.white38), textAlign: TextAlign.end)),
+                          ],
                         ),
                       ),
+                      const Divider(color: Color(0x22FFFFFF), height: 1),
+                      // Player rows
+                      for (var i = 0; i < standings.length; i++)
+                        _PlayerResultRow(
+                          rank: i + 1,
+                          player: standings[i],
+                        ),
+                      const SizedBox(height: 4),
                     ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 16),
+
+                // ── REWARDS ───────────────────────────────────────────────
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Text('🌿', style: TextStyle(fontSize: 14)),
+                    SizedBox(width: 6),
+                    Text(
+                      'REWARDS',
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.4,
+                        color: Color(0xFF4ADE80),
+                      ),
+                    ),
+                    SizedBox(width: 6),
+                    Text('🌿', style: TextStyle(fontSize: 14)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _RewardCard(
+                      asset: 'assets/art/coin.png',
+                      fallbackIcon: Icons.monetization_on_rounded,
+                      fallbackColor: const Color(0xFFFDE047),
+                      label: 'COINS',
+                      value: earnedCoins >= 0 ? '+$earnedCoins' : '$earnedCoins',
+                      positive: earnedCoins >= 0,
+                    ),
+                    const SizedBox(width: 16),
+                    _RewardCard(
+                      asset: 'assets/art/gem.png',
+                      fallbackIcon: Icons.diamond_rounded,
+                      fallbackColor: const Color(0xFFC084FC),
+                      label: 'GEMS',
+                      value: '+$earnedGems',
+                      positive: true,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // ── Buttons ───────────────────────────────────────────────
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 4,
+                      child: _ActionButton(
+                        label: 'SHARE',
+                        icon: Icons.ios_share_rounded,
+                        gradient: const [Color(0xFF581C87), Color(0xFF3B0764)],
+                        borderColor: const Color(0x55A855F7),
+                        onTap: onShare,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 6,
+                      child: _ActionButton(
+                        label: primaryLabel,
+                        gradient: const [Color(0xFF16A34A), Color(0xFF15803D)],
+                        shadowColor: const Color(0xFF22C55E),
+                        onTap: onPrimaryAction,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
             ),
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildPlayerRow({
-    required int rank,
-    required ({int playerIdx, String name, int score, String avatar, bool isYou}) player,
-    required bool isWinner,
-  }) {
-    // Medal Icon or rank badge
-    Widget rankWidget;
-    if (rank == 1) {
-      rankWidget = Container(
-        width: 24,
-        height: 28,
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(
-          color: Color(0xFFF59E0B),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(4), bottom: Radius.circular(8)),
-        ),
-        child: const Text('1', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
-      );
-    } else if (rank == 2) {
-      rankWidget = Container(
-        width: 24,
-        height: 28,
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(
-          color: Color(0xFF94A3B8),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(4), bottom: Radius.circular(8)),
-        ),
-        child: const Text('2', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
-      );
-    } else if (rank == 3) {
-      rankWidget = Container(
-        width: 24,
-        height: 28,
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(
-          color: Color(0xFFB45309),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(4), bottom: Radius.circular(8)),
-        ),
-        child: const Text('3', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
-      );
-    } else {
-      rankWidget = Container(
-        width: 22,
-        height: 22,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: const Color(0x33FFFFFF),
-          shape: BoxShape.circle,
-        ),
-        child: Text('$rank', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w900, fontSize: 11)),
-      );
-    }
+// ── Player row ───────────────────────────────────────────────────────────────
 
-    final coinResult = rank == 1 ? '+120' : (rank == 2 ? '+40' : (rank == 3 ? '-20' : '-40'));
+class _PlayerResultRow extends StatelessWidget {
+  const _PlayerResultRow({required this.rank, required this.player});
+  final int rank;
+  final _Standing player;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWinner = rank == 1;
     final isPositive = rank <= 2;
+    final coinResult = rank == 1 ? '+120' : (rank == 2 ? '+40' : (rank == 3 ? '-20' : '-40'));
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
+    // Medal badge — circular like mockup
+    final medalEmoji = rank == 1 ? '🥇' : (rank == 2 ? '🥈' : (rank == 3 ? '🥉' : null));
+
+    Widget rankWidget = medalEmoji != null
+        ? Text(medalEmoji, style: const TextStyle(fontSize: 26))
+        : Container(
+            width: 26,
+            height: 26,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: Color(0x22FFFFFF),
+              shape: BoxShape.circle,
+            ),
+            child: Text('$rank', style: const TextStyle(color: Colors.white54, fontWeight: FontWeight.w900, fontSize: 12)),
+          );
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      decoration: BoxDecoration(
+        color: isWinner ? const Color(0x15FDE047) : Colors.transparent,
+        border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.06))),
+      ),
       child: Row(
         children: [
-          // Rank Badge
-          SizedBox(width: 28, child: Center(child: rankWidget)),
-          const SizedBox(width: 8),
+          SizedBox(width: 38, child: Center(child: rankWidget)),
 
-          // Avatar + Online Indicator + Name
+          // Avatar + name + winner label
           Expanded(
             flex: 4,
             child: Row(
               children: [
                 Stack(
                   children: [
-                    CircleAvatar(
-                      radius: 17,
-                      backgroundColor: isWinner ? const Color(0xFFFDE047) : const Color(0x33FFFFFF),
-                      child: CircleAvatar(
-                        radius: 15,
-                        backgroundImage: AssetImage(player.avatar),
-                        backgroundColor: const Color(0xFF3B0764),
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: isWinner
+                            ? const LinearGradient(colors: [Color(0xFFFDE047), Color(0xFFD97706)])
+                            : null,
+                        color: isWinner ? null : const Color(0x33FFFFFF),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.all(isWinner ? 2.0 : 1.0),
+                        child: ClipOval(
+                          child: player.avatar.startsWith('av_')
+                              ? ZcAvatars.forId(player.avatar, 34)
+                              : Image.asset(
+                                  player.avatar,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const ColoredBox(
+                                    color: Color(0xFF3B0764),
+                                    child: Center(child: Icon(Icons.person, color: Colors.white54, size: 18)),
+                                  ),
+                                ),
+                        ),
                       ),
                     ),
+                    // Online dot
                     Positioned(
                       right: 0,
                       bottom: 0,
                       child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF22C55E),
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF22C55E),
                           shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFF0F062A), width: 1.5),
                         ),
                       ),
                     ),
@@ -990,7 +919,7 @@ class _ResultsAnnouncementOverlay extends StatelessWidget {
                           style: TextStyle(
                             fontFamily: 'Nunito',
                             fontSize: 10,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                             color: Color(0xFF4ADE80),
                           ),
                         ),
@@ -1001,14 +930,14 @@ class _ResultsAnnouncementOverlay extends StatelessWidget {
             ),
           ),
 
-          // Final Score
+          // Final score
           Expanded(
             flex: 3,
             child: Text(
               '${player.score}',
               style: TextStyle(
                 fontFamily: 'Nunito',
-                fontSize: 16,
+                fontSize: 20,
                 fontWeight: FontWeight.w900,
                 color: isWinner ? const Color(0xFF4ADE80) : Colors.white,
               ),
@@ -1016,35 +945,32 @@ class _ResultsAnnouncementOverlay extends StatelessWidget {
             ),
           ),
 
-          // Coins Result Delta
+          // Coins result
           Expanded(
             flex: 3,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                if (isWinner) ...[
-                  const Icon(Icons.emoji_events_rounded, color: Color(0xFFFDE047), size: 14),
-                  const SizedBox(width: 2),
-                ],
+                if (isWinner)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 2),
+                    child: Text('👑', style: TextStyle(fontSize: 12)),
+                  ),
                 Text(
                   coinResult,
                   style: TextStyle(
                     fontFamily: 'Nunito',
-                    fontSize: 13.5,
+                    fontSize: 13,
                     fontWeight: FontWeight.w900,
                     color: isPositive ? const Color(0xFF4ADE80) : const Color(0xFFEF4444),
                   ),
                 ),
-                const SizedBox(width: 3),
+                const SizedBox(width: 2),
                 Image.asset(
                   'assets/art/coin.png',
                   width: 14,
                   height: 14,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.monetization_on,
-                    size: 14,
-                    color: Color(0xFFFACC15),
-                  ),
+                  errorBuilder: (_, __, ___) => const Text('🪙', style: TextStyle(fontSize: 12)),
                 ),
               ],
             ),
@@ -1053,47 +979,129 @@ class _ResultsAnnouncementOverlay extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildRewardCard({
-    required Widget iconWidget,
-    required String label,
-    required String value,
-    required bool isPositive,
-  }) {
+// ── Reward card ──────────────────────────────────────────────────────────────
+
+class _RewardCard extends StatelessWidget {
+  const _RewardCard({
+    required this.asset,
+    required this.fallbackIcon,
+    required this.fallbackColor,
+    required this.label,
+    required this.value,
+    required this.positive,
+  });
+  final String asset;
+  final IconData fallbackIcon;
+  final Color fallbackColor;
+  final String label;
+  final String value;
+  final bool positive;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      width: 105,
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      width: 120,
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       decoration: BoxDecoration(
-        color: const Color(0x881E0A3C),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x448B5CF6)),
+        color: const Color(0xAA1A0B3D),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x448B5CF6), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+            blurRadius: 12,
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          iconWidget,
-          const SizedBox(height: 4),
+          Image.asset(
+            asset,
+            width: 40,
+            height: 40,
+            errorBuilder: (_, __, ___) => Icon(fallbackIcon, color: fallbackColor, size: 40),
+          ),
+          const SizedBox(height: 6),
           Text(
             label,
             style: const TextStyle(
               fontFamily: 'Nunito',
-              fontSize: 9.5,
+              fontSize: 10,
               fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
-              color: Colors.white70,
+              letterSpacing: 0.8,
+              color: Colors.white60,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
           Text(
             value,
             style: TextStyle(
               fontFamily: 'Nunito',
-              fontSize: 14,
+              fontSize: 20,
               fontWeight: FontWeight.w900,
-              color: isPositive ? const Color(0xFF4ADE80) : const Color(0xFFEF4444),
+              color: positive ? const Color(0xFF4ADE80) : const Color(0xFFEF4444),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Action button ─────────────────────────────────────────────────────────────
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.label,
+    this.icon,
+    required this.gradient,
+    this.borderColor,
+    this.shadowColor,
+    required this.onTap,
+  });
+  final String label;
+  final IconData? icon;
+  final List<Color> gradient;
+  final Color? borderColor;
+  final Color? shadowColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 50,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: gradient),
+          borderRadius: BorderRadius.circular(14),
+          border: borderColor != null ? Border.all(color: borderColor!, width: 1) : null,
+          boxShadow: shadowColor != null
+              ? [BoxShadow(color: shadowColor!.withValues(alpha: 0.4), blurRadius: 14, offset: const Offset(0, 3))]
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, color: Colors.white, size: 18),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: const TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.6,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
