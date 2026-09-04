@@ -40,6 +40,16 @@ public class E1_2_ScoringTest {
         t("group + leftover",            score(c(5,0), c(5,1), c(5,2), c(9,1)), 9);
         t("user scenario 777+333+4+2=6", score(c(7,0),c(7,1),c(7,2),c(3,0),c(3,1),c(3,2),c(4,2),c(2,0)), 6);
 
+        // special card rules
+        Card sp = new Card(nextId++, Rank.ACE, Suit.HEARTS, 0, true);
+        t("special + pair = 0", score(c(5,0), c(5,1), sp), 0);
+        t("lone special = 10", score(sp), 10);
+        Card sp2 = new Card(nextId++, Rank.ACE, Suit.DIAMONDS, 0, true);
+        t("two specials = 20", score(sp, sp2), 20);
+        t("special + single = 15", score(c(5,0), sp), 15);
+        t("special does not join 3+ group",
+            score(c(5,0), c(5,1), c(5,2), sp), 10); // group 0 + special 10
+
         // structural checks: groups vs loose
         var r = ScoringEngine.optimize(List.of(c(5,0), c(5,1), c(5,2), c(9,1)));
         t("one group found", r.groupCount(), 1);

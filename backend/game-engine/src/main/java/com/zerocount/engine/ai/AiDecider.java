@@ -4,7 +4,10 @@ import com.zerocount.engine.model.Card;
 import com.zerocount.engine.model.Hand;
 import com.zerocount.engine.scoring.ScoringEngine;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import com.zerocount.engine.model.Rank;
 
 /**
  * AI decision engine — direct port of frozen V1 (bestAfterDraw, bestDiscardIdx,
@@ -52,6 +55,7 @@ public final class AiDecider {
     /**
      * Which card to discard.
      * EASY (naive): highest face value. NORMAL/HARD: card whose removal minimizes count.
+     * Specials are kept when they can complete a pair and discarded as dead weight otherwise.
      */
     public Card chooseDiscard(Hand hand) {
         List<Card> cards = hand.cards();
@@ -69,7 +73,32 @@ public final class AiDecider {
             int count = ScoringEngine.count(rest);
             if (count < bestCount) { bestCount = count; best = c; }
         }
+        if (best.isSpecial() && hasPairableRank(hand, best)) {
+            Card fallback = null;
+            int fallbackCount = Integer.MAX_VALUE;
+            for (Card c : cards) {
+                if (c.isSpecial() || c == best) continue;
+                List<Card> rest = new ArrayList<>(cards);
+                rest.remove(c);
+                int count = ScoringEngine.count(rest);
+                if (count <= fallbackCount) { fallbackCount = count; fallback = c; }
+            }
+            if (fallback != null && fallbackCount <= bestCount) best = fallback;
+        }
         return best;
+    }
+
+    /**
+     * V2.2: a Special is usable only when a rank has exactly 2 normal cards.
+     * Ranks with 3+ cards already form a natural zero group.
+     */
+    private boolean hasPairableRank(Hand hand, Card exclude) {
+        Map<Rank, Integer> counts = new HashMap<>();
+        for (Card c : hand.cards()) {
+            if (c.isSpecial() || c.equals(exclude)) continue;
+            counts.merge(c.rank(), 1, Integer::sum);
+        }
+        return counts.values().stream().anyMatch(n -> n == 2);
     }
 
     /** SHOW threshold for this AI (V1: max(2, handSize * 0.6 * aggression * showMul)). */

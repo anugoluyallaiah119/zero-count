@@ -23,19 +23,30 @@ public class E1_1_ModelTest {
         t("J/Q/K distinct ranks", Rank.JACK == Rank.QUEEN, false);
 
         // deck build: unique ids, correct size
-        List<Card> d1 = DeckBuilder.build(1);
+        List<Card> d1 = DeckBuilder.build(1, 0);
         t("1 deck = 52", d1.size(), 52);
         t("unique ids", new HashSet<>(d1).size(), 52);
-        List<Card> d2 = DeckBuilder.build(2);
+        List<Card> d2 = DeckBuilder.build(2, 0);
         t("2 decks = 104", d2.size(), 104);
         t("unique ids 2 decks", new HashSet<>(d2).size(), 104);
+        // special cards: appended at the end of the deck
+        List<Card> d1s = DeckBuilder.build(1, 2);
+        long specials = d1s.stream().filter(Card::isSpecial).count();
+        t("special count honored", specials, 2L);
+        t("1 deck + 2 specials = 54", d1s.size(), 54);
 
-        // multi-deck rule (V1: players*hand+15 > 52 → 2 decks)
-        t("2p×7c → 1 deck", new GameConfig(2, 7, 100).deckCount(), 1);
-        t("4p×7c → 1 deck", new GameConfig(4, 7, 100).deckCount(), 1);
-        t("3p×13c → 2 decks", new GameConfig(3, 13, 200).deckCount(), 2);
-        t("4p×13c → 2 decks", new GameConfig(4, 13, 200).deckCount(), 2);
-        t("2p×13c → 1 deck", new GameConfig(2, 13, 100).deckCount(), 1);
+        // V2.2 deck sizes: 2/3 players use one deck; 4 players use a fractional
+        // second deck (65 for 7-card, 78 for 13-card). Special is always 1 extra card.
+        t("2p×7c normal = 52", new GameConfig(2, 7, 100).normalCardCount(), 52);
+        t("4p×7c normal = 60", new GameConfig(4, 7, 100).normalCardCount(), 60);
+        t("3p×13c normal = 52", new GameConfig(3, 13, 200).normalCardCount(), 52);
+        t("4p×13c normal = 65", new GameConfig(4, 13, 200).normalCardCount(), 65);
+        t("2p×13c normal = 52", new GameConfig(2, 13, 100).normalCardCount(), 52);
+
+        // special card distribution: exactly 1 in every match
+        t("2p → 1 special", new GameConfig(2, 7, 100).specialCount(), 1);
+        t("3p → 1 special", new GameConfig(3, 7, 100).specialCount(), 1);
+        t("4p → 1 special", new GameConfig(4, 7, 100).specialCount(), 1);
 
         // config validation
         boolean threw = false;

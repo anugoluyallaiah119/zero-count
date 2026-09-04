@@ -78,7 +78,8 @@ class AiDecider {
   }
 
   /// Which card to discard. EASY: highest face value. NORMAL/HARD: the card
-  /// whose removal minimizes the count.
+  /// whose removal minimizes the count. Specials are kept when they can
+  /// complete a pair and discarded when they would otherwise decay as dead weight.
   Card chooseDiscard(Hand hand) {
     final cards = hand.cards;
     if (cards.isEmpty) throw ArgumentError('empty hand');
@@ -99,7 +100,39 @@ class AiDecider {
         best = c;
       }
     }
+    // If the "best" discard is a special, only discard it when no pair exists
+    // for it to complete (i.e., it is not currently saving points).
+    if (best.isSpecial) {
+      final hasPair = _hasPairableRank(hand, exclude: best);
+      if (hasPair) {
+        // Find the next best non-special discard, falling back to the special
+        // if everything else is equally valuable.
+        Card? fallback;
+        var fallbackCount = 1 << 30;
+        for (final c in cards) {
+          if (c.isSpecial || c == best) continue;
+          final rest = [...cards]..remove(c);
+          final count = ScoringEngine.count(rest);
+          if (count < fallbackCount) {
+            fallbackCount = count;
+            fallback = c;
+          }
+        }
+        if (fallback != null && fallbackCount <= bestCount) best = fallback;
+      }
+    }
     return best;
+  }
+
+  /// V2.2: a Special is usable only when a rank has exactly 2 normal cards.
+  /// Ranks with 3+ cards already form a natural zero group.
+  bool _hasPairableRank(Hand hand, {Card? exclude}) {
+    final counts = <Rank, int>{};
+    for (final c in hand.cards) {
+      if (c.isSpecial || c == exclude) continue;
+      counts[c.rank] = (counts[c.rank] ?? 0) + 1;
+    }
+    return counts.values.any((n) => n == 2);
   }
 
   /// SHOW threshold (V1: max(2, round(handSize * 0.6 * aggression * showMul))).

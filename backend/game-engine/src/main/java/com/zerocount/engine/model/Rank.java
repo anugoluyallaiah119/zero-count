@@ -24,4 +24,9 @@ public enum Rank {
         if (r < 1 || r > 13) throw new IllegalArgumentException("rank 1..13, got " + r);
         return values()[r - 1];
     }
+
+    public static Rank fromLabel(String label) {
+        for (Rank r : values()) if (r.label.equals(label)) return r;
+        throw new IllegalArgumentException("unknown rank label: " + label);
+    }
 }

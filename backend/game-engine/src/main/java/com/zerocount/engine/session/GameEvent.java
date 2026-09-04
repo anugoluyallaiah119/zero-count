@@ -1,6 +1,7 @@
 package com.zerocount.engine.session;
 
 import com.zerocount.engine.model.Card;
+import com.zerocount.engine.model.Rank;
 import java.util.List;
 
 /**
@@ -15,6 +16,9 @@ public sealed interface GameEvent {
     record DrewStock(long seq, String playerId) implements GameEvent {}           // card hidden from others
     record DrewDiscard(long seq, String playerId, Card card) implements GameEvent {}
     record Discarded(long seq, String playerId, Card card) implements GameEvent {}
+    record SpecialDiscarded(long seq, String playerId, Card card) implements GameEvent {}
+    record SpecialPinned(long seq, String playerId, int cardId, Rank rank) implements GameEvent {}
+    record SpecialUnpinned(long seq, String playerId, int cardId) implements GameEvent {}
     record TurnPassed(long seq, String nextPlayerId) implements GameEvent {}
     record Showed(long seq, String playerId) implements GameEvent {}
     record StockRecycled(long seq, int newStockSize) implements GameEvent {}

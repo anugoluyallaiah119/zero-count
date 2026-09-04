@@ -1,14 +1,30 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zerocount_app/engine/ai.dart';
+import 'package:zerocount_app/engine/draw_brain.dart';
 import 'package:zerocount_app/engine/model.dart';
 import 'package:zerocount_app/engine/scoring.dart';
 import 'package:zerocount_app/engine/session.dart';
+
+import 'dart:math';
+
+/// Test-only RNG: always returns 0 for nextDouble() so probabilistic branches
+/// (e.g. DrawBrain opening balancer) fire deterministically.
+class _AlwaysHitRng implements Random {
+  @override
+  bool nextBool() => true;
+  @override
+  double nextDouble() => 0.0;
+  @override
+  int nextInt(int max) => 0;
+}
+
 
 // Card helper: c(rank 1-13, suit 0-3) with unique ids, mirroring the Java
 // test harness so cases port 1:1.
 int _id = 0;
 Card c(int rank, int suit) =>
     Card(_id++, Rank.values[rank - 1], Suit.values[suit], 0);
+Card special() => Card(_id++, Rank.ace, Suit.hearts, 0, isSpecial: true);
 Hand hand(List<Card> cards) {
   final h = Hand();
   for (final card in cards) {
@@ -49,6 +65,13 @@ void main() {
             ]),
             6));
 
+    test('special + pair = 0', () {
+      expect(score([c(5, 0), c(5, 1), special()]), 0);
+    });
+    test('lone special = 10', () => expect(score([special()]), 10));
+    test('two specials = 20', () => expect(score([special(), special()]), 20));
+    test('special + single = 15', () => expect(score([c(5, 0), special()]), 15));
+
     test('structural: one group + one loose', () {
       final r = ScoringEngine.optimize([c(5, 0), c(5, 1), c(5, 2), c(9, 1)]);
       expect(r.groups.length, 1);
@@ -62,6 +85,25 @@ void main() {
       expect(r.count, 0);
       expect(r.groups.length, 2);
     });
+
+    test('pin forces Special onto chosen pair', () {
+      // Hand: 5♥ 5♦ K♠ K♣ + Special. Auto picks K pair (saves 20).
+      final hand = [c(5, 0), c(5, 1), c(13, 2), c(13, 3), special()];
+      final auto = ScoringEngine.optimize(hand);
+      expect(auto.count, 10); // 5-pair leftover
+      // Pinning the 5 pair forces the worse choice (saves 10 → 20 remain).
+      final pinnedFives = ScoringEngine.count(hand, pinRank: Rank.five);
+      expect(pinnedFives, 20);
+      // Pinning to K matches the auto choice.
+      final pinnedKings = ScoringEngine.count(hand, pinRank: Rank.king);
+      expect(pinnedKings, 10);
+    });
+
+    test('pin to a broken pair is ignored (falls back to optimal)', () {
+      // Only one 5 in hand — pinning to fives is invalid, engine picks Kings.
+      final hand = [c(5, 0), c(13, 2), c(13, 3), special()];
+      expect(ScoringEngine.count(hand, pinRank: Rank.five), 5);
+    });
   });
 
   group('E1.3 session parity', () {
@@ -74,7 +116,7 @@ void main() {
       expect(g.players[0].hand.size, 7);
       expect(g.players[1].hand.size, 7);
       expect(g.topDiscard, isNotNull);
-      expect(g.stockSize, 52 - 15);
+      expect(g.stockSize, g.config.deckSize - 15);
       expect(g.round, 1);
     });
 
@@ -135,20 +177,85 @@ void main() {
       expect(g.eventLog.length >= 4, true);
     });
 
-    test('card conservation (2p quick, 1 deck)', () {
+    test('card conservation (2p quick, 1 deck + special)', () {
       final g = newGame();
       final all = <int>{
         for (final p in g.players) ...p.hand.cards.map((e) => e.id),
       };
       all.add(g.topDiscard!.id);
-      expect(all.length, 15);
-      expect(g.stockSize + 15, 52);
+      expect(all.length, 15 + g.config.specialCount);
+      expect(g.stockSize + 15 + g.config.specialCount, g.config.deckSize);
     });
 
-    test('4p 13-card match completes with 2 decks', () {
+    test('special decay: unusable special discards after 4 owner turns', () {
+      final g = newGame(123);
+      final p1 = g.players[0];
+      // Replace p1's hand with controlled distinct-rank cards + a lone special.
+      while (p1.hand.size > 0) p1.hand.remove(p1.hand.cards.first);
+      p1.hand.add(Card(100, Rank.ace, Suit.hearts, 0));
+      p1.hand.add(Card(101, Rank.two, Suit.hearts, 0));
+      p1.hand.add(Card(102, Rank.three, Suit.hearts, 0));
+      p1.hand.add(Card(103, Rank.four, Suit.hearts, 0));
+      p1.hand.add(Card(104, Rank.five, Suit.hearts, 0));
+      p1.hand.add(Card(105, Rank.six, Suit.hearts, 0));
+      p1.hand.add(Card(106, Rank.eight, Suit.hearts, 0));
+      final special = Card(9999, Rank.ace, Suit.hearts, 0, isSpecial: true);
+      p1.hand.add(special);
+
+      Card safeDiscard(PlayerState p) =>
+          p.hand.cards.firstWhere((c) => !c.isSpecial);
+
+      // Play turns, counting only p1 owner turns.
+      var p1Turns = 0;
+      var discarded = false;
+      while (p1Turns < 6 && !discarded) {
+        final p = g.currentPlayer;
+        if (p == p1) p1Turns++;
+        g.apply(p.playerId, const DrawStock());
+        g.apply(p.playerId, Discard(safeDiscard(p)));
+        final before = g.eventLog.whereType<SpecialDiscarded>().length;
+        g.passTurn();
+        discarded = g.eventLog.whereType<SpecialDiscarded>().length > before;
+      }
+      expect(discarded, true);
+    });
+
+    test('special decay: timer pauses while a valid pair exists', () {
+      final g = newGame(456);
+      final p1 = g.players[0];
+      // Replace p1's hand: one valid pair + many distinct other cards + special.
+      while (p1.hand.size > 0) p1.hand.remove(p1.hand.cards.first);
+      p1.hand.add(Card(200, Rank.seven, Suit.hearts, 0));
+      p1.hand.add(Card(201, Rank.seven, Suit.diamonds, 0));
+      p1.hand.add(Card(202, Rank.ace, Suit.clubs, 0));
+      p1.hand.add(Card(203, Rank.two, Suit.spades, 0));
+      p1.hand.add(Card(204, Rank.three, Suit.hearts, 0));
+      p1.hand.add(Card(205, Rank.four, Suit.diamonds, 0));
+      p1.hand.add(Card(206, Rank.five, Suit.clubs, 0));
+      p1.hand.add(Card(207, Rank.six, Suit.spades, 0));
+      p1.hand.add(Card(208, Rank.eight, Suit.hearts, 0));
+      p1.hand.add(Card(209, Rank.nine, Suit.diamonds, 0));
+      p1.hand.add(Card(210, Rank.ten, Suit.clubs, 0));
+      final special = Card(9999, Rank.ace, Suit.hearts, 0, isSpecial: true);
+      p1.hand.add(special);
+
+      Card safeDiscard(PlayerState p) => p.hand.cards.firstWhere(
+          (c) => !c.isSpecial && c.rank != Rank.seven);
+
+      // Play several full rounds; the usable special must never auto-discard.
+      for (var i = 0; i < 14; i++) {
+        final p = g.currentPlayer;
+        g.apply(p.playerId, const DrawStock());
+        g.apply(p.playerId, Discard(safeDiscard(p)));
+        g.passTurn();
+      }
+      expect(p1.hand.cards.any((c) => c.isSpecial), true);
+    });
+
+    test('4p 13-card match completes with fractional second deck', () {
       final g = GameSession(
           GameConfig.classicPlay(4), ['a', 'b', 'c', 'd'], 7);
-      expect(g.config.deckCount, 2);
+      expect(g.config.deckSize, 66); // 65 normal + 1 special
       final ai = AiDecider.of(DifficultyProfile.normal, 0);
       var guard = 0;
       while (!g.isOver && guard++ < 5000) {
@@ -229,6 +336,42 @@ void main() {
     });
   });
 
+  group('DrawBrain (V2.2 §32–39)', () {
+    test('draws a group-completing card over noise from stock top', () {
+      final h = hand([c(7, 0), c(7, 1), c(3, 0), c(11, 2)]);
+      // Stock ordered so top (last) is a useless K, but a 7 sits deeper.
+      final stock = [c(2, 2), c(8, 1), c(7, 2), c(9, 0), c(13, 3)];
+      final picked = DrawBrain.drawFromStock(stock, h, 0);
+      expect(picked.rank, Rank.seven, reason: 'should surface the 7');
+      expect(stock.length, 4, reason: 'exactly one card removed');
+    });
+
+    test('opening balancer creates a pair when possible', () {
+      final h = hand([c(2, 0), c(5, 1), c(7, 2), c(9, 3), c(13, 0)]); // no pair
+      // Stock contains a 5 the balancer can swap in.
+      final stock = <Card>[c(3, 0), c(5, 2), c(11, 1), c(4, 2)];
+      // A deterministic RNG that always fires the 72% roll (nextDouble → 0).
+      final rng = _AlwaysHitRng();
+      DrawBrain.balanceOpeningHand(h, stock, rng);
+      final ranks = h.cards.map((e) => e.rank).toList()..sort((a, b) => a.value - b.value);
+      expect(ranks.where((r) => r == Rank.five).length, 2);
+    });
+
+    test('opening balancer leaves a hand that already has a pair', () {
+      final h = hand([c(5, 0), c(5, 1), c(7, 2), c(9, 3)]);
+      final before = h.cards.map((e) => e.id).toList();
+      final stock = <Card>[c(5, 2), c(11, 1)];
+      DrawBrain.balanceOpeningHand(h, stock, Random(0));
+      expect(h.cards.map((e) => e.id).toList(), before);
+    });
+
+    test('session exposes per-player dry-draw counter', () {
+      final g = GameSession(GameConfig.quickPlay(2), ['p1', 'p2'], 7);
+      expect(g.dryDrawsFor('p1'), 0);
+      expect(g.dryDrawsFor('p2'), 0);
+    });
+  });
+
   group('E1.5 simulation (scaled): invariants over 500 matches', () {
     test('card conservation + seq order + termination', () {
       for (var seed = 0; seed < 500; seed++) {
@@ -259,7 +402,7 @@ void main() {
               fail('unexpected phase');
           }
 
-          // invariant: card conservation at every step
+          // invariant: card conservation at every step (specials included)
           final ids = <int>{
             for (final pl in g.players) ...pl.hand.cards.map((e) => e.id),
           };
@@ -268,7 +411,15 @@ void main() {
           // ids = hands ∪ {topDiscard}; |hands| = ids − (topDiscard?1:0)
           final handCards = ids.length - (top != null ? 1 : 0);
           final totalCards = handCards + g.discardSize + g.stockSize;
-          expect(totalCards, g.config.deckCount * 52,
+          expect(totalCards, g.config.deckSize,
+              reason: 'seed=$seed turn=$guard');
+          // visible specials never exceed the configured amount
+          final visibleSpecials = g.players
+                  .expand((p) => p.hand.cards)
+                  .where((c) => c.isSpecial)
+                  .length +
+              (top?.isSpecial == true ? 1 : 0);
+          expect(visibleSpecials, lessThanOrEqualTo(g.config.specialCount),
               reason: 'seed=$seed turn=$guard');
         }
         expect(g.isOver, true, reason: 'seed=$seed must terminate');

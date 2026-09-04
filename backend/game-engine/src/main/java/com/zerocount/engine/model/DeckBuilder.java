@@ -15,21 +15,39 @@ public final class DeckBuilder {
 
     private DeckBuilder() {}
 
-    /** Ordered, unshuffled deck: deckCount × 52 cards, unique ids. */
-    public static List<Card> build(int deckCount) {
+    /**
+     * Ordered, unshuffled deck: {@code deckCount} full 52-card decks as normal
+     * cards, followed by {@code specialCount} Special cards appended at the end.
+     */
+    public static List<Card> build(int deckCount, int specialCount) {
         if (deckCount < 1 || deckCount > 2)
             throw new IllegalArgumentException("deckCount must be 1 or 2, got " + deckCount);
-        List<Card> deck = new ArrayList<>(deckCount * 52);
+        if (specialCount < 0)
+            throw new IllegalArgumentException("specialCount cannot be negative: " + specialCount);
+        List<Card> deck = new ArrayList<>(deckCount * 52 + specialCount);
         int id = 0;
         for (int d = 0; d < deckCount; d++)
             for (Suit s : Suit.values())
                 for (Rank r : Rank.values())
-                    deck.add(new Card(id++, r, s, d));
+                    deck.add(new Card(id++, r, s, d, false));
+        for (int i = 0; i < specialCount; i++)
+            deck.add(new Card(id++, Rank.ACE, Suit.HEARTS, 0, true));
         return deck;
     }
 
     public static List<Card> buildFor(GameConfig config) {
-        return build(config.deckCount());
+        int normal = config.normalCardCount();
+        int extra = normal > 52 ? normal - 52 : 0;
+        List<Card> deck = build(1, 0);
+        if (extra > 0) {
+            for (Card c : build(1, 0)) {
+                deck.add(new Card(deck.size(), c.rank(), c.suit(), 1, false));
+                if (deck.size() == 52 + extra) break;
+            }
+        }
+        for (int i = 0; i < config.specialCount(); i++)
+            deck.add(new Card(deck.size(), Rank.ACE, Suit.HEARTS, 0, true));
+        return deck;
     }
 
     /** Fisher-Yates, anti-cheat grade (server). */

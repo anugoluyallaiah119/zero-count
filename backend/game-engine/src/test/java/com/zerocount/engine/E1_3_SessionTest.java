@@ -41,7 +41,7 @@ public class E1_3_SessionTest {
         t("p1 hand 7", g.players().get(0).hand().size(), 7);
         t("p2 hand 7", g.players().get(1).hand().size(), 7);
         t("one visible discard", g.topDiscard() != null, true);
-        t("stock = 52-15", g.stockSize(), 52 - 15);
+        t("stock = deckSize-15", g.stockSize(), cfg.deckSize() - 15);
         t("round 1", g.round(), 1);
 
         // wrong player cannot move
@@ -104,10 +104,11 @@ public class E1_3_SessionTest {
         t("events recorded", g.eventLog().size() >= 8, true);
 
         // invariants at two points in the game
-        checkIntegrity(g, 52, "after round transitions");
+        checkIntegrity(g, cfg.deckSize(), "after round transitions");
 
         // long-run invariant: play a full match with a simple scripted policy
-        GameSession g2 = new GameSession(new GameConfig(4, 13, 100),
+        GameConfig cfg2 = new GameConfig(4, 13, 100);
+        GameSession g2 = new GameSession(cfg2,
             List.of("a","b","c","d"), 7L);
         int safety = 0;
         while (!g2.isOver() && safety++ < 5000) {
@@ -121,7 +122,7 @@ public class E1_3_SessionTest {
             }
         }
         t("4p 13-card match completes", g2.isOver(), true);
-        checkIntegrity(g2, 104, "end of 4p/13c match");
+        checkIntegrity(g2, cfg2.deckSize(), "end of 4p/13c match");
 
         System.out.println("E1.3 TESTS: " + pass + " pass, " + fail + " fail");
         if (fail > 0) System.exit(1);

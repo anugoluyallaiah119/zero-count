@@ -55,7 +55,7 @@ enum Rank {
 /// Immutable card with a globally unique id (per match) — required for the
 /// card-conservation invariant (no duplicates, no missing cards).
 class Card {
-  const Card(this.id, this.rank, this.suit, this.deck);
+  const Card(this.id, this.rank, this.suit, this.deck, {this.isSpecial = false});
 
   final int id;
   final Rank rank;
@@ -64,7 +64,11 @@ class Card {
   /// Which physical deck (0 or 1) — matters for 13-card games.
   final int deck;
 
-  int get value => rank.value;
+  /// Special cards can complete a pair (2 same-rank cards) into a ZERO group.
+  final bool isSpecial;
+
+  /// A lone special card counts as 10; when it completes a pair the group is 0.
+  int get value => isSpecial ? 10 : rank.value;
 
   @override
   bool operator ==(Object other) => other is Card && other.id == id;
@@ -73,7 +77,7 @@ class Card {
   int get hashCode => id;
 
   @override
-  String toString() => '${rank.label}${suit.symbol}';
+  String toString() => isSpecial ? '★' : '${rank.label}${suit.symbol}';
 }
 
 enum Phase {
@@ -130,8 +134,21 @@ class GameConfig {
   final int handSize;
   final int target;
 
-  /// V1 multi-deck rule.
-  int get deckCount => players * handSize + 15 > 52 ? 2 : 1;
+  /// Number of normal (non-special) cards in the deck.
+  /// Four-player modes add a small fractional second deck for extra duplicates.
+  int get normalCardCount {
+    if (players == 4) {
+      if (handSize == 7) return 60; // 1 full deck + 15% second deck (8 cards)
+      return 65; // 1 full deck + 25% second deck (13 cards)
+    }
+    return 52; // one full deck for 2/3 players
+  }
+
+  /// Total cards in play = normal cards + special cards.
+  int get deckSize => normalCardCount + specialCount;
+
+  /// V2.2 spec: exactly one Special card in every match.
+  int get specialCount => 1;
 
   static GameConfig quickPlay(int players) => GameConfig(players, 7, 100);
   static GameConfig classicPlay(int players) => GameConfig(players, 13, 200);
@@ -163,24 +180,57 @@ class Hand {
 /// Builds and shuffles decks (V1 buildDeck/shuffle). Fisher-Yates with an
 /// injected RNG so tests/simulations are reproducible.
 abstract final class DeckBuilder {
-  /// Ordered, unshuffled deck: deckCount × 52 cards, unique ids.
-  static List<Card> build(int deckCount) {
+  /// Ordered, unshuffled deck.
+  ///
+  /// [deckCount] full 52-card decks are generated as normal cards. Then
+  /// [specialCount] Special cards are appended. This lets the deck contain
+  /// the normal-card count from the V2.2 spec plus exactly one Special.
+  static List<Card> build(int deckCount, {int specialCount = 0}) {
     if (deckCount < 1 || deckCount > 2) {
       throw ArgumentError('deckCount must be 1 or 2, got $deckCount');
+    }
+    if (specialCount < 0) {
+      throw ArgumentError('specialCount cannot be negative: $specialCount');
     }
     final deck = <Card>[];
     var id = 0;
     for (var d = 0; d < deckCount; d++) {
       for (final s in Suit.values) {
         for (final r in Rank.values) {
-          deck.add(Card(id++, r, s, d));
+          deck.add(Card(id, r, s, d));
+          id++;
         }
       }
+    }
+    for (var i = 0; i < specialCount; i++) {
+      deck.add(Card(id++, Rank.ace, Suit.hearts, 0, isSpecial: true));
     }
     return deck;
   }
 
-  static List<Card> buildFor(GameConfig config) => build(config.deckCount);
+  /// Build a deck for [config] using the configured normal-card count and
+  /// exactly one Special. Four-player modes use a fractional second deck.
+  static List<Card> buildFor(GameConfig config) {
+    final normal = config.normalCardCount;
+    final extra = normal > 52 ? normal - 52 : 0;
+    final base = build(1, specialCount: 0);
+    if (extra > 0) {
+      var id = base.length;
+      for (final c in build(1, specialCount: 0).take(extra)) {
+        base.add(Card(id++, c.rank, c.suit, 1));
+      }
+    }
+    for (var i = 0; i < config.specialCount; i++) {
+      base.add(Card(
+        base.length,
+        Rank.ace,
+        Suit.hearts,
+        0,
+        isSpecial: true,
+      ));
+    }
+    return base;
+  }
 
   static List<Card> shuffle(List<Card> deck, [Random? rng]) {
     final r = rng ?? Random.secure();

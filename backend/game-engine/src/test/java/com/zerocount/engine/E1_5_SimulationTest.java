@@ -13,7 +13,7 @@ import java.util.*;
  *
  * Invariants:
  *   I1  Card conservation — cards in all hands + stock + discard always
- *       equals deckCount * 52, and no card id appears twice in any hand.
+ *       equals config.deckSize(), and no card id appears twice in any hand.
  *   I2  Event sequence — GameEvent seq numbers strictly increase per session.
  *   I3  Phase legality — the sim's chosen move must always be legal
  *       (cross-checked with GameSession.isLegal before applying).
@@ -50,8 +50,14 @@ public class E1_5_SimulationTest {
             }
         }
         int total = inHands + g.stockSize() + g.discardSize();
-        int expected = g.config().deckCount() * 52;
+        int expected = g.config().deckSize();
         invariant(total == expected, "card conservation: " + total + " != " + expected, matchNo);
+        // Special conservation: specials are visible in hands or on top of discard.
+        long specialsVisible = g.players().stream()
+            .flatMap(p -> p.hand().cards().stream()).filter(Card::isSpecial).count();
+        if (g.topDiscard() != null && g.topDiscard().isSpecial()) specialsVisible++;
+        invariant(specialsVisible <= g.config().specialCount(),
+            "too many specials visible: " + specialsVisible, matchNo);
     }
 
     /** I2: event seq strictly increasing. */
@@ -163,12 +169,26 @@ public class E1_5_SimulationTest {
 
     public static void main(String[] args) {
         int matchesPerCfg = args.length > 0 ? Integer.parseInt(args[0]) : 2000; // 5 cfgs x 2000 = 10k
+        // CI shard offset: distinct env value → each shard explores different seeds.
+        long shardSeedOffset = 0L;
+        String envShard = System.getenv("ZC_SIM_SHARD_SEED");
+        if (envShard != null && !envShard.isEmpty()) {
+            try { shardSeedOffset = Long.parseLong(envShard); }
+            catch (NumberFormatException ignore) {}
+        }
         long t0 = System.currentTimeMillis();
 
         int[][] cfgs = { // players, handSize, target
             {2, 7, 100}, {3, 7, 100}, {4, 13, 200}, {2, 13, 500}, {4, 7, 200}
         };
         DifficultyProfile[] diffs = DifficultyProfile.values();
+
+        // Progress reporting: log every 5% of total matches (rounded up to
+        // avoid spam on short runs). Silence for 30+ minutes is a UX problem
+        // on the heavy-simulation CI job.
+        long totalMatches = (long) matchesPerCfg * cfgs.length;
+        long progressStep = Math.max(1, totalMatches / 20);
+        long nextProgressAt = progressStep;
 
         long matchNo = 0;
         for (int[] cc : cfgs) {
@@ -178,8 +198,19 @@ public class E1_5_SimulationTest {
                 for (int s = 0; s < cc[0]; s++) {
                     ais.add(AiPlayer.forSeat("ai" + s, diffs[(int) ((matchNo + s) % 3)], s));
                 }
-                playMatch(cfg, ais, 1000 + matchNo, matchNo);
+                playMatch(cfg, ais, 1000 + shardSeedOffset + matchNo, matchNo);
                 matchNo++;
+                if (matchNo >= nextProgressAt) {
+                    long elapsed = System.currentTimeMillis() - t0;
+                    double pct = 100.0 * matchNo / totalMatches;
+                    long etaMs = totalMatches == matchNo ? 0
+                        : elapsed * (totalMatches - matchNo) / matchNo;
+                    System.out.printf(
+                        "E1.5 progress: %d / %d matches (%.1f%%), %d checks, elapsed %ds, eta %ds%n",
+                        matchNo, totalMatches, pct, checks,
+                        elapsed / 1000, etaMs / 1000);
+                    nextProgressAt += progressStep;
+                }
             }
         }
 
