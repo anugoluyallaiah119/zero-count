@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../ui/zc_bottom_nav.dart';
 import '../../ui/zc_header.dart';
 import '../../ui/zc_theme.dart';
 import '../auth/avatar_catalog.dart';
 import '../player/profile_repository.dart';
+import 'contest_repository.dart';
 
 /// Events hub — Daily / Weekly / Monthly / Sponsored tabs (Phase 2 mockups).
 class EventsScreen extends ConsumerStatefulWidget {
@@ -905,6 +907,8 @@ class _MonthlyTab extends StatelessWidget {
           chipValue: '18d : 09h : 41m',
           art: 'assets/art/hero_monthly.png',
         ),
+        // Live tournaments banner — wired to real /api/contests data.
+        const _LiveTournamentsBanner(),
         _monthlyCard(
           icon: 'assets/art/ev_cup_premium.png',
           premium: true,
@@ -1147,6 +1151,95 @@ class _MonthlyTab extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Banner in the Monthly tab that surfaces live /api/contests data.
+class _LiveTournamentsBanner extends ConsumerWidget {
+  const _LiveTournamentsBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(activeContestsProvider);
+    return async.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (contests) {
+        if (contests.isEmpty) return const SizedBox.shrink();
+        final c = contests.first;
+        final timeLeft = c.timeLeft;
+        final days = timeLeft.inDays;
+        final hours = timeLeft.inHours.remainder(24);
+        return GestureDetector(
+          onTap: () => context.push('/tournaments'),
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF2A0E5C), Color(0xFF1A0840)],
+              ),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                  color: const Color(0x66A855F7), width: 1.2),
+            ),
+            child: Row(
+              children: [
+                const Text('🏆', style: TextStyle(fontSize: 32)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        c.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${days}d ${hours}h remaining · Win = +3 pts',
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF5A1FA8), Color(0xFF3A1280)],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    'VIEW',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
