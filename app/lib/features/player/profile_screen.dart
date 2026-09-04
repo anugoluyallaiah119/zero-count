@@ -6,6 +6,7 @@ import '../../ui/zc_cosmetics.dart';
 import '../../ui/zc_theme.dart';
 import '../../ui/zc_bottom_nav.dart';
 import '../auth/avatar_catalog.dart';
+import '../player/achievement_repository.dart';
 import '../player/profile_repository.dart';
 import 'edit_profile_sheet.dart';
 
@@ -525,15 +526,16 @@ class _QuickTile extends StatelessWidget {
 }
 
 // =============================================================================
-// ACHIEVEMENTS SKELETON (V2.3 placeholder with real data)
+// ACHIEVEMENTS — V2.3 real grid
 // =============================================================================
 
-class _AchievementsSkeleton extends StatelessWidget {
+class _AchievementsSkeleton extends ConsumerWidget {
   const _AchievementsSkeleton({required this.profile});
   final PlayerProfile profile;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final achievementsAsync = ref.watch(achievementsProvider);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Column(
@@ -565,43 +567,135 @@ class _AchievementsSkeleton extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0x14FFFFFF),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0x22FFFFFF)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.emoji_events_rounded,
-                    color: ZcColors.gold, size: 24),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Achievements coming in V2.3',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800)),
-                      Text(
-                          'Collect badges for wins, streaks & special plays.',
-                          style: TextStyle(
-                              color: Colors.white38,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.lock_rounded,
-                    color: Colors.white24, size: 18),
-              ],
-            ),
+          const SizedBox(height: 16),
+          achievementsAsync.when(
+            loading: () => const _AchievementShimmer(),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (list) => _AchievementsGrid(achievements: list),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AchievementsGrid extends StatelessWidget {
+  const _AchievementsGrid({required this.achievements});
+  final List<Achievement> achievements;
+
+  @override
+  Widget build(BuildContext context) {
+    final earned = achievements.where((a) => a.earned).length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const _SectionLabel('ACHIEVEMENTS'),
+            const Spacer(),
+            Text(
+              '$earned / ${achievements.length}',
+              style: const TextStyle(
+                  color: ZcColors.gold,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: achievements.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 0.8,
+          ),
+          itemBuilder: (_, i) => _AchievementTile(a: achievements[i]),
+        ),
+      ],
+    );
+  }
+}
+
+class _AchievementTile extends StatelessWidget {
+  const _AchievementTile({required this.a});
+  final Achievement a;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Achievement.rarityColor(a.rarity);
+    return Tooltip(
+      message: '${a.title}\n${a.description}'
+          '${a.rewardCoins > 0 ? '\n+${a.rewardCoins} coins' : ''}',
+      child: Container(
+        decoration: BoxDecoration(
+          color: a.earned
+              ? color.withValues(alpha: 0.15)
+              : const Color(0x0AFFFFFF),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: a.earned
+                ? color.withValues(alpha: 0.5)
+                : const Color(0x18FFFFFF),
+            width: 1.2,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ColorFiltered(
+              colorFilter: a.earned
+                  ? const ColorFilter.mode(Colors.transparent, BlendMode.dst)
+                  : const ColorFilter.matrix([
+                      0.2126, 0.7152, 0.0722, 0, 0,
+                      0.2126, 0.7152, 0.0722, 0, 0,
+                      0.2126, 0.7152, 0.0722, 0, 0,
+                      0,      0,      0,      0.4, 0,
+                    ]),
+              child: Text(a.icon,
+                  style: const TextStyle(fontSize: 26)),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              a.title,
+              style: TextStyle(
+                color: a.earned ? Colors.white : Colors.white38,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AchievementShimmer extends StatelessWidget {
+  const _AchievementShimmer();
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: 8,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 0.8,
+      ),
+      itemBuilder: (_, __) => Container(
+        decoration: BoxDecoration(
+          color: const Color(0x0AFFFFFF),
+          borderRadius: BorderRadius.circular(14),
+        ),
       ),
     );
   }

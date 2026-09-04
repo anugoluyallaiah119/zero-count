@@ -1,8 +1,18 @@
 package com.zerocount.server.wallet;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -36,8 +46,18 @@ import com.zerocount.server.player.AuthInterceptor;
 @RequestMapping("/api/wallet")
 public class IapController {
 
+    private static final Logger log = LoggerFactory.getLogger(IapController.class);
+    private static final String ANDROID_PACKAGE = "com.zerocount.app";
+
     private final JdbcTemplate db;
     private final WalletService wallet;
+    private final HttpClient http = HttpClient.newHttpClient();
+    private final ObjectMapper json = new ObjectMapper();
+
+    /** Google Play service-account OAuth2 bearer — set via env var GOOGLE_PLAY_API_TOKEN. */
+    @Value("${app.iap.google-play-token:}") private String googlePlayToken;
+    /** App Store private key JWT — set via env var APPLE_IAP_JWT. */
+    @Value("${app.iap.apple-jwt:}") private String appleJwt;
 
     /** Product catalog: productId → coin grant. Mirrors the Flutter IapCatalog. */
     private static final java.util.Map<String, Long> COIN_GRANTS = Map.of(
@@ -79,20 +99,14 @@ public class IapController {
         }
 
         // ---------- Platform verification ---------------------------------
-        // TODO (Google Play): call
-        //   https://androidpublisher.googleapis.com/androidpublisher/v3/applications
-        //   /{packageName}/purchases/products/{productId}/tokens/{purchaseToken}
-        //   with your service-account OAuth2 bearer token.
-        //   Check purchaseState == 0 (purchased) and acknowledge if not already.
-        //
-        // TODO (App Store): call
-        //   https://api.storekit.itunes.apple.com/inApps/v1/transactions/{transactionId}
-        //   with your signed JWT from your Apple private key.
-        //   Check status == 0 (valid).
-        //
-        // For now, trust the client. Production MUST verify before granting coins.
-        boolean verified = true; // STUB — replace with real verification above.
+        boolean verified = switch (body.platform()) {
+            case "google" -> verifyGoogle(body.productId(), body.purchaseToken());
+            case "apple"  -> verifyApple(body.purchaseToken());
+            default       -> false;
+        };
         if (!verified) {
+            log.warn("IAP receipt rejected for user={} product={} platform={}",
+                userId, body.productId(), body.platform());
             return Map.of("granted", false, "reason", "receipt_invalid",
                 "balance", wallet.balance(userId).coins());
         }
@@ -121,6 +135,90 @@ public class IapController {
         }
 
         throw new IllegalArgumentException("unknown product: " + body.productId());
+    }
+
+    /**
+     * Google Play Developer API v3 — verify a consumable product purchase.
+     * Requires GOOGLE_PLAY_API_TOKEN env var (OAuth2 service-account bearer).
+     * Falls back to true (dev mode) when the token is not configured.
+     */
+    private boolean verifyGoogle(String productId, String purchaseToken) {
+        if (googlePlayToken == null || googlePlayToken.isBlank()) {
+            log.warn("GOOGLE_PLAY_API_TOKEN not set — skipping Google Play verification (dev mode)");
+            return true;
+        }
+        try {
+            String url = "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/"
+                + ANDROID_PACKAGE + "/purchases/products/"
+                + productId + "/tokens/" + purchaseToken;
+            HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Authorization", "Bearer " + googlePlayToken)
+                .GET().build();
+            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+            if (res.statusCode() != 200) {
+                log.warn("Google Play verify HTTP {}: {}", res.statusCode(), res.body());
+                return false;
+            }
+            JsonNode node = json.readTree(res.body());
+            int purchaseState = node.path("purchaseState").asInt(-1);
+            // purchaseState 0 = purchased, 1 = cancelled, 2 = pending
+            if (purchaseState != 0) return false;
+            // Acknowledge if not yet acknowledged (prevents auto-refund after 3 days)
+            if (node.path("acknowledgementState").asInt(0) == 0) {
+                acknowledgeGoogle(productId, purchaseToken);
+            }
+            return true;
+        } catch (IOException | InterruptedException e) {
+            log.error("Google Play verification error", e);
+            return false;
+        }
+    }
+
+    private void acknowledgeGoogle(String productId, String purchaseToken) {
+        try {
+            String url = "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/"
+                + ANDROID_PACKAGE + "/purchases/products/"
+                + productId + "/tokens/" + purchaseToken + ":acknowledge";
+            HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Authorization", "Bearer " + googlePlayToken)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("{}")).build();
+            http.send(req, HttpResponse.BodyHandlers.discarding());
+        } catch (IOException | InterruptedException e) {
+            log.warn("Google Play acknowledge failed (non-fatal)", e);
+        }
+    }
+
+    /**
+     * App Store Server API — verify a StoreKit 2 transaction.
+     * Requires APPLE_IAP_JWT env var (signed JWT from Apple private key).
+     * Falls back to true (dev mode) when the JWT is not configured.
+     */
+    private boolean verifyApple(String transactionId) {
+        if (appleJwt == null || appleJwt.isBlank()) {
+            log.warn("APPLE_IAP_JWT not set — skipping App Store verification (dev mode)");
+            return true;
+        }
+        try {
+            String url = "https://api.storekit.itunes.apple.com/inApps/v1/transactions/" + transactionId;
+            HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Authorization", "Bearer " + appleJwt)
+                .GET().build();
+            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+            if (res.statusCode() != 200) {
+                log.warn("App Store verify HTTP {}: {}", res.statusCode(), res.body());
+                return false;
+            }
+            JsonNode node = json.readTree(res.body());
+            // status 0 = valid; any other value = invalid/revoked
+            return node.path("status").asInt(-1) == 0;
+        } catch (IOException | InterruptedException e) {
+            log.error("App Store verification error", e);
+            return false;
+        }
     }
 
     private static void validate(IapClaimBody b) {

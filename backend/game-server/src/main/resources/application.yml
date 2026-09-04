@@ -44,6 +44,11 @@ app:
     # V2.2 Phase 4 — per-user DrawBrain tuning. False = all users get the
     # baseline V2.2 §32–39 behaviour (useful as an A/B control cohort).
     enabled: ${ADAPTIVE_DRAW_ENABLED:true}
+  iap:
+    google-play-token: ${GOOGLE_PLAY_API_TOKEN:}
+    apple-jwt: ${APPLE_IAP_JWT:}
+  fcm:
+    server-key: ${FCM_SERVER_KEY:}
 
 management:
   endpoints:

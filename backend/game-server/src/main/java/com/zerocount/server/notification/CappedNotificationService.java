@@ -1,12 +1,19 @@
 package com.zerocount.server.notification;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -37,7 +44,15 @@ public class CappedNotificationService implements NotificationService {
         java.util.Set.of(Notification.Kind.CHALLENGE_NUDGE,
             Notification.Kind.STREAK_AT_RISK, Notification.Kind.CONTEST_STARTING);
 
+    private static final String FCM_URL =
+        "https://fcm.googleapis.com/fcm/send";
+
     private final JdbcTemplate db;
+    private final HttpClient http = HttpClient.newHttpClient();
+    private final ObjectMapper json = new ObjectMapper();
+
+    /** FCM legacy server key — set via env var FCM_SERVER_KEY. Empty = log-only. */
+    @Value("${app.fcm.server-key:}") private String fcmServerKey;
 
     public CappedNotificationService(JdbcTemplate db) {
         this.db = db;
@@ -60,14 +75,46 @@ public class CappedNotificationService implements NotificationService {
         deliver(userId, n);
     }
 
-    /** FCM fan-out to the user's registered devices. Log-only until the FCM
-     *  server key is provisioned (deploy env var FCM_SERVER_KEY). */
+    /** Fan-out to all registered FCM tokens for the user.
+     *  Uses real FCM HTTP v1 when FCM_SERVER_KEY is set; logs-only otherwise. */
     protected void deliver(UUID userId, Notification n) {
         List<String> tokens = db.queryForList(
             "SELECT fcm_token FROM device_tokens WHERE user_id = ?",
             String.class, userId);
-        log.info("notify {} [{}] {} ({} device(s))", userId, n.kind(), n.title(),
-            tokens.size());
+        log.info("notify {} [{}] {} ({} device(s))", userId, n.kind(), n.title(), tokens.size());
+        if (fcmServerKey == null || fcmServerKey.isBlank()) return; // dev mode
+
+        for (String token : tokens) {
+            sendFcm(token, n);
+        }
+    }
+
+    private void sendFcm(String token, Notification n) {
+        try {
+            Map<String, String> data = n.data() != null ? n.data() : Map.of();
+            Map<String, Object> body = Map.of(
+                "to", token,
+                "notification", Map.of(
+                    "title", n.title(),
+                    "body",  n.body()
+                ),
+                "data", data,
+                "priority", "high"
+            );
+            String bodyJson = json.writeValueAsString(body);
+            HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(FCM_URL))
+                .header("Authorization", "key=" + fcmServerKey)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(bodyJson))
+                .build();
+            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+            if (res.statusCode() != 200) {
+                log.warn("FCM delivery failed for token={} status={}", token, res.statusCode());
+            }
+        } catch (IOException | InterruptedException e) {
+            log.error("FCM send error for token={}", token, e);
+        }
     }
 
     @Override
