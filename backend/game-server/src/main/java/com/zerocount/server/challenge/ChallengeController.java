@@ -36,12 +36,20 @@ public class ChallengeController {
     }
 
     private static Map<String, Object> json(ChallengeService.Today t) {
-        return Map.of(
-            "type", t.type(),
-            "target", t.target(),
-            "reward", t.reward(),
-            "progress", t.progress(),
-            "claimed", t.claimed(),
-            "canClaim", t.canClaim());
+        var m = new java.util.LinkedHashMap<String, Object>();
+        m.put("type",             t.type());
+        m.put("title",            t.title());
+        m.put("description",      t.description());
+        m.put("cadence",          t.cadence());
+        m.put("target",           t.target());
+        m.put("reward",           t.rewardCoins()); // back-compat
+        m.put("rewardCoins",      t.rewardCoins());
+        m.put("rewardGems",       t.rewardGems());
+        m.put("rewardCosmeticId", t.rewardCosmeticId());
+        m.put("sponsorName",      t.sponsorName());
+        m.put("progress",         t.progress());
+        m.put("claimed",          t.claimed());
+        m.put("canClaim",         t.canClaim());
+        return m;
     }
 }

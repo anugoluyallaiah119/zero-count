@@ -36,7 +36,7 @@ class FlywayMigrationTest {
             DataSource ds = pg.getPostgresDatabase();
             Flyway flyway = Flyway.configure().dataSource(ds).load();
             int applied = flyway.migrate().migrationsExecuted;
-            assertThat(applied).isEqualTo(11);
+            assertThat(applied).isEqualTo(12);
 
             try (Connection c = ds.getConnection()) {
                 // 1. All 15 tables exist (flyway_schema_history is Flyway's own).

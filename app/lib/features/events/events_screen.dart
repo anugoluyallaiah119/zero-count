@@ -773,14 +773,18 @@ class _LiveDailyCard extends StatelessWidget {
         _EventCard(
           def: _EventDef(
             icon: c.icon,
-            title: c.title,
+            title: c.sponsorName != null
+                ? '${c.sponsorName!.toUpperCase()}: ${c.title}'
+                : c.title,
             desc: c.description,
             progress: c.progress,
             total: c.target,
-            coins: c.reward,
-            gems: 0,
+            coins: c.rewardCoins,
+            gems: c.rewardGems,
             action: action,
-            color: const Color(0xFF7B2FE0),
+            color: c.sponsorName != null
+                ? const Color(0xFFE88A15)
+                : const Color(0xFF7B2FE0),
             onTap: c.canClaim
                 ? () async {
                     await ref
@@ -802,10 +806,14 @@ class _LiveDailyCard extends StatelessWidget {
               : 'Complete the challenge to earn your reward!',
           milestones: [
             (asset: 'assets/art/coin.png',
-             value: '${c.reward}',
+             value: '${c.rewardCoins}',
              done: c.claimed),
-            (asset: 'assets/art/gem.png', value: '10', done: false),
-            (asset: 'assets/art/gift_box.png', value: '1', done: false),
+            if (c.rewardGems > 0)
+              (asset: 'assets/art/gem.png',
+               value: '${c.rewardGems}',
+               done: c.claimed),
+            if (c.rewardCosmeticId != null)
+              (asset: 'assets/art/gift_box.png', value: '1', done: c.claimed),
           ],
         ),
       ],
