@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Zero Count — Admin Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #0e0823;
+         color: #e2d9f3; margin: 0; min-height: 100vh; }
+
+  /* ── Top bar ── */
+  .topbar { display: flex; align-items: center; gap: 16px; padding: 0 24px;
+            height: 56px; background: #16093a; border-bottom: 1px solid #2a1860; }
+  .topbar h1 { font-size: 16px; font-weight: 800; color: #c77dff; margin: 0; flex: 1; }
+  .topbar .tag { background: #7b2ff7; color: #fff; font-size: 11px;
+                 font-weight: 700; padding: 3px 8px; border-radius: 6px; }
+  #authRow { display: flex; gap: 8px; }
+  #tokenInput { width: 280px; padding: 6px 12px; border-radius: 8px;
+                border: 1px solid #3b1d7a; background: #1e0f4a; color: #eee;
+                font-size: 13px; }
+  #loginBtn { padding: 6px 16px; border: 0; border-radius: 8px;
+              background: #c77dff; font-weight: 700; cursor: pointer; font-size:13px; }
+  #logoutBtn { padding: 6px 12px; border: 0; border-radius: 8px;
+               background: #3b1d7a; color: #eee; cursor: pointer; font-size:13px; display:none; }
+
+  /* ── Layout ── */
+  .shell { display: flex; height: calc(100vh - 56px); }
+  nav { width: 180px; background: #13073a; padding: 20px 0; flex-shrink: 0; }
+  nav a { display: block; padding: 10px 20px; font-size: 13px; font-weight: 600;
+          color: #9b72cf; cursor: pointer; border-left: 3px solid transparent;
+          text-decoration: none; }
+  nav a.active, nav a:hover { color: #fff; background: #1e0f4a;
+                               border-left-color: #c77dff; }
+  .content { flex: 1; overflow-y: auto; padding: 28px 32px; }
+
+  /* ── Tabs ── */
+  .tab { display: none; }
+  .tab.active { display: block; }
+
+  /* ── Cards row ── */
+  .cards { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 28px; }
+  .card { background: #1e0f4a; border-radius: 14px; padding: 16px 22px;
+          min-width: 130px; border: 1px solid #2a1860; }
+  .card b { display: block; font-size: 28px; color: #ffb830; font-weight: 900; }
+  .card span { font-size: 11px; color: #9b72cf; font-weight: 600;
+               text-transform: uppercase; letter-spacing: .5px; }
+
+  /* ── Section heading ── */
+  h2 { font-size: 14px; font-weight: 800; color: #c77dff; text-transform: uppercase;
+       letter-spacing: .8px; margin: 0 0 14px; padding-bottom: 8px;
+       border-bottom: 1px solid #2a1860; }
+
+  /* ── Tables ── */
+  .tbl-wrap { overflow-x: auto; margin-bottom: 28px; border-radius: 10px;
+              border: 1px solid #2a1860; }
+  table { border-collapse: collapse; width: 100%; min-width: 500px; }
+  th { background: #1e0f4a; padding: 8px 12px; font-size: 11px; font-weight: 800;
+       text-transform: uppercase; letter-spacing: .5px; color: #9b72cf;
+       text-align: left; }
+  td { padding: 8px 12px; font-size: 13px; border-top: 1px solid #1e0f4a; }
+  tr:hover td { background: #1e0f4a44; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 6px;
+           font-size: 11px; font-weight: 700; }
+  .b-new      { background: #1565e833; color: #60a5fa; }
+  .b-frustrat { background: #e8151533; color: #f87171; }
+  .b-weak     { background: #e88a1533; color: #fbbf24; }
+  .b-strong   { background: #18b84a33; color: #4ade80; }
+  .b-special  { background: #7b2ff733; color: #c77dff; }
+  .b-base     { background: #33333344; color: #aaa; }
+  .b-daily    { background: #1565e833; color: #60a5fa; }
+  .b-weekly   { background: #7b2ff733; color: #c77dff; }
+  .b-monthly  { background: #e88a1533; color: #fbbf24; }
+
+  /* ── Forms ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+               background: #1e0f4a; padding: 20px; border-radius: 14px;
+               border: 1px solid #2a1860; margin-bottom: 28px; }
+  .form-grid.wide { grid-template-columns: 1fr; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field.span2 { grid-column: span 2; }
+  label { font-size: 11px; font-weight: 700; color: #9b72cf;
+          text-transform: uppercase; letter-spacing: .5px; }
+  input, select, textarea {
+    background: #13073a; border: 1px solid #3b1d7a; border-radius: 8px;
+    color: #eee; padding: 8px 12px; font-size: 13px; font-family: inherit;
+    width: 100%; }
+  textarea { min-height: 72px; resize: vertical; }
+  input[type=checkbox] { width: auto; }
+  .check-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .btn { padding: 9px 20px; border: 0; border-radius: 9px; font-weight: 700;
+         cursor: pointer; font-size: 13px; }
+  .btn-primary { background: #c77dff; color: #0e0823; }
+  .btn-secondary { background: #3b1d7a; color: #eee; }
+  .btn-warn { background: #e88a15; color: #0e0823; }
+  .btn-sm { padding: 4px 10px; font-size: 11px; border-radius: 6px; }
+
+  /* ── Misc ── */
+  .err  { color: #f87171; font-size: 13px; margin-top: 6px; }
+  .ok   { color: #4ade80; font-size: 13px; margin-top: 6px; }
+  .muted { color: #6b5a8e; font-size: 12px; }
+  .pie-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .pie-chip { display: flex; align-items: center; gap: 6px; font-size: 12px;
+              background: #1e0f4a; padding: 6px 12px; border-radius: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  #spinner { display: none; color: #9b72cf; font-size: 13px; margin: 8px 0; }
+  .empty { color: #6b5a8e; font-size: 13px; padding: 16px 0; }
+</style>
+</head>
+<body>
+
+<!-- ── Top bar ── -->
+<div class="topbar">
+  <h1>⚡ Zero Count Admin</h1>
+  <span class="tag">INTERNAL</span>
+  <div id="authRow">
+    <input id="tokenInput" type="password" placeholder="X-Admin-Token">
+    <button class="btn btn-primary" id="loginBtn" onclick="doLogin()">Sign In</button>
+    <button class="btn btn-secondary" id="logoutBtn" onclick="doLogout()">Sign Out</button>
+  </div>
+</div>
+
+<!-- ── Shell ── -->
+<div class="shell" id="shell" style="display:none">
+  <nav>
+    <a class="active" onclick="showTab('overview')">📊 Overview</a>
+    <a onclick="showTab('challenges')">🎯 Challenges</a>
+    <a onclick="showTab('cohorts')">🧠 A/B Cohorts</a>
+    <a onclick="showTab('monetization')">💰 Monetization</a>
+    <a onclick="showTab('sponsors')">🤝 Sponsors</a>
+    <a onclick="showTab('push')">🔔 Push</a>
+  </nav>
+
+  <div class="content">
+    <div id="spinner">Loading…</div>
+
+    <!-- ── OVERVIEW ── -->
+    <div class="tab active" id="tab-overview">
+      <h2>Overview</h2>
+      <div class="cards" id="overviewCards"></div>
+      <h2>Active Challenges</h2>
+      <div class="tbl-wrap"><table id="activeChallengesTbl">
+        <thead><tr><th>Title</th><th>Type</th><th>Cadence</th><th>Reward</th><th>Sponsor</th><th>Active Until</th><th>Push Sent</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+
+    <!-- ── CHALLENGES ── -->
+    <div class="tab" id="tab-challenges">
+      <h2>Create Challenge</h2>
+      <div class="form-grid" id="challengeForm">
+        <div class="field">
+          <label>Type *</label>
+          <select id="cf-type">
+            <option value="play_matches">Play Matches</option>
+            <option value="win_matches">Win Matches</option>
+            <option value="call_show">Call Show</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Target (count) *</label>
+          <input id="cf-target" type="number" min="1" value="3">
+        </div>
+        <div class="field">
+          <label>Cadence *</label>
+          <select id="cf-cadence">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Active From</label>
+          <input id="cf-from" type="date">
+        </div>
+        <div class="field">
+          <label>Active Until</label>
+          <input id="cf-until" type="date">
+        </div>
+        <div class="field">
+          <label>Title (optional — auto if blank)</label>
+          <input id="cf-title" type="text" placeholder="WEEKLY CHAMPION">
+        </div>
+        <div class="field span2">
+          <label>Description</label>
+          <textarea id="cf-desc" placeholder="Win 3 matches to earn exclusive rewards!"></textarea>
+        </div>
+        <div class="field">
+          <label>Reward Coins</label>
+          <input id="cf-coins" type="number" min="0" value="100">
+        </div>
+        <div class="field">
+          <label>Reward Gems</label>
+          <input id="cf-gems" type="number" min="0" value="0">
+        </div>
+        <div class="field">
+          <label>Reward Cosmetic ID (optional)</label>
+          <input id="cf-cosmetic" type="text" placeholder="back.aurora">
+        </div>
+        <div class="field">
+          <label>Sponsor ID (optional UUID)</label>
+          <input id="cf-sponsor" type="text" placeholder="uuid-of-sponsor">
+        </div>
+        <div class="field">
+          <label>Created By</label>
+          <input id="cf-by" type="text" placeholder="admin@zerocount.app">
+        </div>
+        <div class="field" style="justify-content:flex-end;flex-direction:row;align-items:center;gap:10px;">
+          <div class="check-row">
+            <input id="cf-notify" type="checkbox" checked>
+            <label for="cf-notify" style="text-transform:none;letter-spacing:0;color:#e2d9f3">Push notification to all users</label>
+          </div>
+        </div>
+        <div class="field span2" style="flex-direction:row;gap:10px;align-items:center">
+          <button class="btn btn-primary" onclick="createChallenge()">🚀 Create & Push</button>
+          <span id="cfMsg"></span>
+        </div>
+      </div>
+
+      <h2>All Challenges</h2>
+      <div class="tbl-wrap"><table id="allChallengesTbl">
+        <thead><tr><th>Title</th><th>Type</th><th>Cadence</th><th>Coins</th><th>Gems</th><th>Sponsor</th><th>From</th><th>Until</th><th>Push</th><th>By</th><th>Action</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+
+    <!-- ── COHORTS ── -->
+    <div class="tab" id="tab-cohorts">
+      <h2>Adaptive A/B Cohorts</h2>
+      <div class="pie-row" id="cohortPie"></div>
+      <div class="tbl-wrap"><table id="cohortTbl">
+        <thead><tr><th>Name</th><th>Cohort</th><th>Matches</th><th>Avg Show</th><th>Dry Draw %</th><th>Special Use %</th><th>Updated</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+
+    <!-- ── MONETIZATION ── -->
+    <div class="tab" id="tab-monetization">
+      <h2>IAP Transactions</h2>
+      <div class="cards" id="iapCards"></div>
+      <div class="tbl-wrap"><table id="iapTbl">
+        <thead><tr><th>User</th><th>Type</th><th>Amount</th><th>Product</th><th>Time</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <h2>Ad Rewards Today</h2>
+      <div class="tbl-wrap"><table id="adTbl">
+        <thead><tr><th>User ID</th><th>Ads Today</th><th>Coins Earned</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+
+    <!-- ── SPONSORS ── -->
+    <div class="tab" id="tab-sponsors">
+      <h2>Add Sponsor</h2>
+      <div class="form-grid" style="max-width:560px">
+        <div class="field">
+          <label>Name *</label>
+          <input id="sp-name" type="text" placeholder="Swiggy">
+        </div>
+        <div class="field">
+          <label>Logo URL</label>
+          <input id="sp-logo" type="text" placeholder="https://cdn.example.com/logo.png">
+        </div>
+        <div class="field span2">
+          <label>Site URL</label>
+          <input id="sp-site" type="text" placeholder="https://swiggy.com">
+        </div>
+        <div class="field span2" style="flex-direction:row;gap:10px;align-items:center">
+          <button class="btn btn-primary" onclick="createSponsor()">➕ Add Sponsor</button>
+          <span id="spMsg"></span>
+        </div>
+      </div>
+      <h2>Sponsors</h2>
+      <div class="tbl-wrap"><table id="sponsorsTbl">
+        <thead><tr><th>ID</th><th>Name</th><th>Logo URL</th><th>Site</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+
+    <!-- ── PUSH ── -->
+    <div class="tab" id="tab-push">
+      <h2>Re-Push a Challenge</h2>
+      <div class="form-grid" style="max-width:420px">
+        <div class="field span2">
+          <label>Challenge ID (UUID)</label>
+          <input id="push-id" type="text" placeholder="uuid-of-challenge">
+        </div>
+        <div class="field span2" style="flex-direction:row;gap:10px;align-items:center">
+          <button class="btn btn-warn" onclick="repush()">📣 Send Push Now</button>
+          <span id="pushMsg"></span>
+        </div>
+      </div>
+      <p class="muted">This will send a CHALLENGE_NUDGE push to all users active in the last 90 days, respecting per-user mutes and quiet hours (22:00–08:00 UTC).</p>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /shell -->
+
+<!-- ── Login screen ── -->
+<div id="loginScreen" style="display:flex;align-items:center;justify-content:center;height:calc(100vh - 56px)">
+  <div style="text-align:center;color:#6b5a8e">
+    <div style="font-size:48px;margin-bottom:12px">🔐</div>
+    <div style="font-size:14px">Enter your Admin Token in the top bar to sign in.</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+let TOKEN = '';
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+function doLogin() {
+  const t = document.getElementById('tokenInput').value.trim();
+  if (!t) return;
+  TOKEN = t;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('shell').style.display = 'flex';
+  document.getElementById('loginBtn').style.display = 'none';
+  document.getElementById('logoutBtn').style.display = '';
+  document.getElementById('tokenInput').style.display = 'none';
+  loadTab('overview');
+}
+function doLogout() {
+  TOKEN = '';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('shell').style.display = 'none';
+  document.getElementById('loginBtn').style.display = '';
+  document.getElementById('logoutBtn').style.display = 'none';
+  document.getElementById('tokenInput').style.display = '';
+}
+
+// ── Tab navigation ────────────────────────────────────────────────────────────
+const LOADERS = { overview: loadOverview, challenges: loadChallenges,
+                  cohorts: loadCohorts, monetization: loadMonetization,
+                  sponsors: loadSponsors, push: () => {} };
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  [...document.querySelectorAll('nav a')].find(a => a.textContent.toLowerCase().includes(name.slice(0,3)))?.classList.add('active');
+  loadTab(name);
+}
+function loadTab(name) { LOADERS[name]?.(); }
+
+// ── Fetch helpers ─────────────────────────────────────────────────────────────
+async function api(path, method = 'GET', body = null) {
+  const opts = { method, headers: { 'X-Admin-Token': TOKEN } };
+  if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  const r = await fetch(path, opts);
+  if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || r.statusText); }
+  return r.json().catch(() => ({}));
+}
+function spin(on) { document.getElementById('spinner').style.display = on ? 'block' : 'none'; }
+function fmtDate(s) { if (!s) return '—'; return new Date(s).toLocaleString(); }
+function fmtShort(s) { if (!s) return '—'; return s.toString().slice(0,8) + '…'; }
+
+// ── OVERVIEW ─────────────────────────────────────────────────────────────────
+async function loadOverview() {
+  spin(true);
+  try {
+    const [cohort, iap, ads, challenges] = await Promise.all([
+      api('/api/admin/adaptive-cohort'),
+      api('/api/admin/iap-transactions'),
+      api('/api/admin/ad-rewards'),
+      api('/api/admin/challenges'),
+    ]);
+    const cards = document.getElementById('overviewCards');
+    const totalCoins = iap.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+    const adCoins   = ads.reduce((s, r) => s + (Number(r.coins_today) || 0), 0);
+    cards.innerHTML = `
+      <div class="card"><b>${cohort.total ?? 0}</b><span>Profiled Players</span></div>
+      <div class="card"><b>${iap.length}</b><span>IAP Transactions</span></div>
+      <div class="card"><b>${totalCoins.toLocaleString()}</b><span>IAP Coins Issued</span></div>
+      <div class="card"><b>${adCoins.toLocaleString()}</b><span>Ad Coins Today</span></div>
+      <div class="card"><b>${challenges.length}</b><span>Challenges Total</span></div>`;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const active = challenges.filter(c => c.active_from <= today && c.active_until > today);
+    fillTable('activeChallengesTbl', active, r => `
+      <td>${r.title || r.type}</td>
+      <td>${r.type}</td>
+      <td><span class="badge b-${r.cadence}">${r.cadence}</span></td>
+      <td>🪙${r.reward_coins ?? 0} 💎${r.reward_gems ?? 0}</td>
+      <td>${r.sponsor_name || '—'}</td>
+      <td>${r.active_until || '—'}</td>
+      <td>${r.push_sent ? '✅' : '⏳'}</td>`);
+  } catch(e) { alert('Overview load failed: ' + e.message); }
+  finally { spin(false); }
+}
+
+// ── CHALLENGES ───────────────────────────────────────────────────────────────
+async function loadChallenges() {
+  spin(true);
+  try {
+    const rows = await api('/api/admin/challenges');
+    fillTable('allChallengesTbl', rows, r => `
+      <td>${r.title || '—'}</td>
+      <td>${r.type}</td>
+      <td><span class="badge b-${r.cadence}">${r.cadence}</span></td>
+      <td>${r.reward_coins ?? 0}</td>
+      <td>${r.reward_gems ?? 0}</td>
+      <td>${r.sponsor_name || '—'}</td>
+      <td>${r.active_from || '—'}</td>
+      <td>${r.active_until || '—'}</td>
+      <td>${r.push_sent ? '✅' : '⏳'}</td>
+      <td class="muted">${r.created_by || '—'}</td>
+      <td><button class="btn btn-warn btn-sm" onclick="repushId('${r.id}')">📣</button></td>`);
+    // Pre-fill today's date in the form
+    const today = new Date().toISOString().slice(0, 10);
+    if (!document.getElementById('cf-from').value) document.getElementById('cf-from').value = today;
+  } catch(e) { alert('Challenges load failed: ' + e.message); }
+  finally { spin(false); }
+}
+
+async function createChallenge() {
+  const msg = document.getElementById('cfMsg');
+  msg.className = ''; msg.textContent = 'Saving…';
+  try {
+    const body = {
+      type:            document.getElementById('cf-type').value,
+      target:          parseInt(document.getElementById('cf-target').value),
+      cadence:         document.getElementById('cf-cadence').value,
+      title:           document.getElementById('cf-title').value || null,
+      description:     document.getElementById('cf-desc').value || null,
+      rewardCoins:     parseInt(document.getElementById('cf-coins').value) || 0,
+      rewardGems:      parseInt(document.getElementById('cf-gems').value) || 0,
+      rewardCosmeticId:document.getElementById('cf-cosmetic').value || null,
+      sponsorId:       document.getElementById('cf-sponsor').value || null,
+      activeFrom:      document.getElementById('cf-from').value || null,
+      activeUntil:     document.getElementById('cf-until').value || null,
+      notifyOnStart:   document.getElementById('cf-notify').checked,
+      createdBy:       document.getElementById('cf-by').value || 'admin',
+    };
+    const res = await api('/api/admin/challenges', 'POST', body);
+    msg.className = 'ok';
+    msg.textContent = `✅ Created! Push sent: ${res.pushSent ? 'yes' : 'no (scheduled)'}`;
+    loadChallenges();
+  } catch(e) { msg.className = 'err'; msg.textContent = '❌ ' + e.message; }
+}
+
+// ── COHORTS ──────────────────────────────────────────────────────────────────
+async function loadCohorts() {
+  spin(true);
+  try {
+    const data = await api('/api/admin/adaptive-cohort');
+    // Summary chips
+    const COLORS = { new_user:'#60a5fa', frustrated:'#f87171', weak:'#fbbf24',
+                     strong:'#4ade80', special_ignoring:'#c77dff', baseline:'#aaa' };
+    const pie = document.getElementById('cohortPie');
+    pie.innerHTML = Object.entries(data.cohortSummary || {}).map(([k, v]) =>
+      `<div class="pie-chip"><div class="dot" style="background:${COLORS[k]||'#aaa'}"></div>
+       <b style="color:${COLORS[k]||'#aaa'}">${v}</b>&nbsp;<span class="muted">${k}</span></div>`
+    ).join('');
+    fillTable('cohortTbl', data.users || [], r => {
+      const cls = { new_user:'b-new', frustrated:'b-frustrat', weak:'b-weak',
+                    strong:'b-strong', special_ignoring:'b-special', baseline:'b-base' }[r.cohort] || 'b-base';
+      return `
+        <td>${r.name || fmtShort(r.user_id)}</td>
+        <td><span class="badge ${cls}">${r.cohort}</span></td>
+        <td>${r.matches_played ?? 0}</td>
+        <td>${r.avg_show_count?.toFixed(1) ?? '—'}</td>
+        <td>${r.dry_draw_rate != null ? (r.dry_draw_rate * 100).toFixed(1) + '%' : '—'}</td>
+        <td>${r.special_usage_rate != null ? (r.special_usage_rate * 100).toFixed(1) + '%' : '—'}</td>
+        <td class="muted">${fmtDate(r.updated_at)}</td>`;
+    });
+  } catch(e) { alert('Cohorts load failed: ' + e.message); }
+  finally { spin(false); }
+}
+
+// ── MONETIZATION ─────────────────────────────────────────────────────────────
+async function loadMonetization() {
+  spin(true);
+  try {
+    const [iap, ads] = await Promise.all([
+      api('/api/admin/iap-transactions'),
+      api('/api/admin/ad-rewards'),
+    ]);
+    const totalCoins = iap.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+    const totalAd    = ads.reduce((s, r) => s + (Number(r.coins_today) || 0), 0);
+    document.getElementById('iapCards').innerHTML = `
+      <div class="card"><b>${iap.length}</b><span>IAP Transactions</span></div>
+      <div class="card"><b>${totalCoins.toLocaleString()}</b><span>Total IAP Coins</span></div>
+      <div class="card"><b>${totalAd.toLocaleString()}</b><span>Ad Coins Today</span></div>
+      <div class="card"><b>${ads.length}</b><span>Active Ad Users</span></div>`;
+    fillTable('iapTbl', iap, r => `
+      <td>${r.name || fmtShort(r.user_id)}</td>
+      <td>${r.type}</td>
+      <td class="muted">${Number(r.amount).toLocaleString()}</td>
+      <td class="muted">${r.ref?.replace('iap:','').split(':').slice(-1)[0] || '—'}</td>
+      <td class="muted">${fmtDate(r.ts)}</td>`);
+    fillTable('adTbl', ads, r => `
+      <td class="muted">${fmtShort(r.user_id)}</td>
+      <td>${r.ads_today}</td>
+      <td>${Number(r.coins_today).toLocaleString()}</td>`);
+  } catch(e) { alert('Monetization load failed: ' + e.message); }
+  finally { spin(false); }
+}
+
+// ── SPONSORS ─────────────────────────────────────────────────────────────────
+async function loadSponsors() {
+  spin(true);
+  try {
+    const rows = await api('/api/admin/sponsors');
+    fillTable('sponsorsTbl', rows, r => `
+      <td class="muted" style="font-size:11px">${r.id}</td>
+      <td><b>${r.name}</b></td>
+      <td class="muted">${r.logo_url || '—'}</td>
+      <td><a href="${r.site_url}" target="_blank" style="color:#c77dff">${r.site_url || '—'}</a></td>`);
+  } catch(e) { alert('Sponsors load failed: ' + e.message); }
+  finally { spin(false); }
+}
+
+async function createSponsor() {
+  const msg = document.getElementById('spMsg');
+  msg.className = ''; msg.textContent = 'Saving…';
+  try {
+    const body = { name: document.getElementById('sp-name').value,
+                   logoUrl: document.getElementById('sp-logo').value || null,
+                   siteUrl: document.getElementById('sp-site').value || null };
+    if (!body.name) throw new Error('Name is required');
+    await api('/api/admin/sponsors', 'POST', body);
+    msg.className = 'ok'; msg.textContent = '✅ Sponsor added!';
+    loadSponsors();
+  } catch(e) { msg.className = 'err'; msg.textContent = '❌ ' + e.message; }
+}
+
+// ── PUSH ─────────────────────────────────────────────────────────────────────
+async function repush() {
+  const id = document.getElementById('push-id').value.trim();
+  const msg = document.getElementById('pushMsg');
+  if (!id) { msg.className = 'err'; msg.textContent = 'Enter a challenge ID'; return; }
+  await repushId(id, msg);
+}
+async function repushId(id, msgEl) {
+  const msg = msgEl || document.getElementById('pushMsg');
+  msg && (msg.className = '', msg.textContent = 'Sending…');
+  try {
+    const res = await api('/api/admin/challenges/push', 'POST', { id });
+    if (msg) { msg.className = 'ok'; msg.textContent = '✅ Push sent for challenge ' + id.slice(0, 8) + '…'; }
+    else alert('✅ Push sent!');
+  } catch(e) {
+    if (msg) { msg.className = 'err'; msg.textContent = '❌ ' + e.message; }
+    else alert('❌ ' + e.message);
+  }
+}
+
+// ── Generic table filler ─────────────────────────────────────────────────────
+function fillTable(id, rows, rowFn) {
+  const tbody = document.getElementById(id).querySelector('tbody');
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="20" class="empty">No data yet.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `<tr>${rowFn(r)}</tr>`).join('');
+}
+
+// ── Pre-fill today's date on page load ───────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('cf-from').value = today;
+});
+</script>
+</body>
+</html>
