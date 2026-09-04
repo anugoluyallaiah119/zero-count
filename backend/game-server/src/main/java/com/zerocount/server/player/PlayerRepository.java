@@ -22,7 +22,8 @@ public class PlayerRepository {
                           long coins, long gems, java.time.Instant createdAt) {}
 
     public record Stats(int matches, int wins, int zerosMade, Integer bestCount,
-                        int streakDays, int elo) {}
+                        int streakDays, int elo,
+                        int winStreak, int bestWinStreak) {}
 
     public Optional<Profile> findProfile(UUID userId) {
         return jdbc.query(
@@ -38,12 +39,14 @@ public class PlayerRepository {
 
     public Optional<Stats> findStats(UUID userId) {
         return jdbc.query(
-                "SELECT matches, wins, zeros_made, best_count, streak_days, elo "
+                "SELECT matches, wins, zeros_made, best_count, streak_days, elo, "
+                + "win_streak, best_win_streak "
                 + "FROM statistics WHERE user_id = ?",
                 (rs, i) -> new Stats(
                     rs.getInt("matches"), rs.getInt("wins"), rs.getInt("zeros_made"),
                     (Integer) rs.getObject("best_count"),
-                    rs.getInt("streak_days"), rs.getInt("elo")),
+                    rs.getInt("streak_days"), rs.getInt("elo"),
+                    rs.getInt("win_streak"), rs.getInt("best_win_streak")),
                 userId)
             .stream().findFirst();
     }

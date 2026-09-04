@@ -40,6 +40,10 @@ app:
     # memory = single-JVM dev/test default; redis = production multi-instance.
     store: ${ROOMS_STORE:memory}
     ttl-hours: ${ROOM_TTL_HOURS:2}
+  adaptive:
+    # V2.2 Phase 4 — per-user DrawBrain tuning. False = all users get the
+    # baseline V2.2 §32–39 behaviour (useful as an A/B control cohort).
+    enabled: ${ADAPTIVE_DRAW_ENABLED:true}
 
 management:
   endpoints:

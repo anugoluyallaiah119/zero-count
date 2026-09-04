@@ -39,7 +39,7 @@ public class PlayerController {
         var profile = players.findProfile(userId)
             .orElseThrow(() -> new IllegalStateException("authenticated user missing from DB"));
         var stats = players.findStats(userId)
-            .orElse(new PlayerRepository.Stats(0, 0, 0, null, 0, 1200));
+            .orElse(new PlayerRepository.Stats(0, 0, 0, null, 0, 1200, 0, 0));
         return Map.of(
             "id", profile.id().toString(),
             "phone", maskPhone(profile.phone()),
@@ -54,7 +54,9 @@ public class PlayerController {
                 "zerosMade", stats.zerosMade(),
                 "bestCount", stats.bestCount() == null ? -1 : stats.bestCount(),
                 "streakDays", stats.streakDays(),
-                "elo", stats.elo()
+                "elo", stats.elo(),
+                "winStreak", stats.winStreak(),
+                "bestWinStreak", stats.bestWinStreak()
             )
         );
     }

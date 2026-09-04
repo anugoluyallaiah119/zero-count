@@ -41,13 +41,37 @@ public class MatchService {
     private final Map<String, GameSession> matches = new ConcurrentHashMap<>();
     private final Map<String, List<String>> seatOrder = new ConcurrentHashMap<>();
     private final Map<String, UUID> gameIds = new ConcurrentHashMap<>();
+    private final Map<String, java.util.Set<UUID>> rematchVotes = new ConcurrentHashMap<>();
+    private final Map<String, GameConfig> lastConfig = new ConcurrentHashMap<>();
 
     private final MatchEventRepository eventLog;
     private final List<MatchHook> hooks;
+    private com.zerocount.server.analytics.GameplayAnalyticsService gameplayAnalytics;
+    private com.zerocount.server.player.AdaptiveDrawService adaptiveDraw;
+    private boolean adaptiveEnabled = true;
 
     public MatchService(MatchEventRepository eventLog, List<MatchHook> hooks) {
         this.eventLog = eventLog;
         this.hooks = hooks == null ? List.of() : hooks;
+    }
+
+    /** V2.2 Phase 2 telemetry — nullable so existing tests that don't wire it still pass. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setGameplayAnalytics(
+            com.zerocount.server.analytics.GameplayAnalyticsService svc) {
+        this.gameplayAnalytics = svc;
+    }
+
+    /** V2.2 Phase 4 adaptive per-user DrawBrain tuning — nullable for tests. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setAdaptiveDraw(com.zerocount.server.player.AdaptiveDrawService svc) {
+        this.adaptiveDraw = svc;
+    }
+
+    /** Feature flag: {@code app.adaptive.enabled} — see application.yml. */
+    @org.springframework.beans.factory.annotation.Value("${app.adaptive.enabled:true}")
+    public void setAdaptiveEnabled(boolean enabled) {
+        this.adaptiveEnabled = enabled;
     }
 
     /** Start a match for a room. Seat order is the caller's (lobby order). */
@@ -58,8 +82,22 @@ public class MatchService {
         }
         List<String> ids = seats.stream().map(UUID::toString).toList();
         GameSession session = new GameSession(config, ids, System.nanoTime());
+        // Phase 4: per-user adaptive DrawBrain tuning (falls through to
+        // AdaptiveDrawParams.DEFAULTS when the service isn't wired or the
+        // feature flag is off — useful as an A/B control cohort).
+        if (adaptiveDraw != null && adaptiveEnabled) {
+            session.setAdaptiveParams(pid -> {
+                try {
+                    return adaptiveDraw.paramsFor(UUID.fromString(pid));
+                } catch (RuntimeException e) {
+                    return com.zerocount.engine.session.AdaptiveDrawParams.DEFAULTS;
+                }
+            });
+        }
         matches.put(code, session);
         seatOrder.put(code, ids);
+        lastConfig.put(code, config);
+        rematchVotes.remove(code);
         // M1.3: open the games row + persist the deal events.
         String configJson = "{\"players\":" + config.players()
             + ",\"handSize\":" + config.handSize()
@@ -98,8 +136,43 @@ public class MatchService {
         return events;
     }
 
+    /** "Choose your Zero" — pin the caller's Special to [rank]. */
+    public List<GameEvent> pinSpecial(String code, UUID userId,
+                                     com.zerocount.engine.model.Rank rank) {
+        GameSession s = get(code);
+        List<GameEvent> events;
+        try {
+            events = s.pinSpecial(userId.toString(), rank);
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            throw new IllegalMoveException(e.getMessage());
+        }
+        afterEvents(code, userId, events);
+        return events;
+    }
+
+    /** Clear the caller's pin, if any. */
+    public List<GameEvent> clearSpecialPin(String code, UUID userId) {
+        GameSession s = get(code);
+        List<GameEvent> events;
+        try {
+            events = s.clearSpecialPin(userId.toString());
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            throw new IllegalMoveException(e.getMessage());
+        }
+        afterEvents(code, userId, events);
+        return events;
+    }
+
     private void afterEvents(String code, UUID actor, List<GameEvent> events) {
         persist(code, actor, events);
+        // V2.2 Phase 2: capture structured gameplay telemetry (best-effort).
+        if (gameplayAnalytics != null) {
+            try { gameplayAnalytics.record(code, this, events); }
+            catch (RuntimeException tel) {
+                org.slf4j.LoggerFactory.getLogger(MatchService.class)
+                    .warn("gameplay telemetry failed: {}", tel.toString());
+            }
+        }
         for (GameEvent e : events) {
             try {
                 if (e instanceof GameEvent.MatchEnded me) {
@@ -110,6 +183,10 @@ public class MatchService {
                     int winnerIdx = seats.indexOf(UUID.fromString(me.winnerId()));
                     for (MatchHook h : hooks) {
                         h.onMatchEnded(seats, winnerIdx, me.totals());
+                    }
+                    // Phase 4: Phase 3 just refreshed the model → drop cached params.
+                    if (adaptiveDraw != null) {
+                        for (UUID seat : seats) adaptiveDraw.invalidate(seat);
                     }
                 } else if (e instanceof GameEvent.Showed sh) {
                     for (MatchHook h : hooks) {
@@ -163,7 +240,54 @@ public class MatchService {
         matches.remove(code);
         seatOrder.remove(code);
         gameIds.remove(code);
+        rematchVotes.remove(code);
+        lastConfig.remove(code);
     }
+
+    // ---------- rematch ----------
+
+    public record RematchState(int votes, int seats, List<String> voters, boolean ready) {}
+
+    /** Record a rematch vote for [userId] in [code]. Returns the new state.
+     *  Only seated players may vote; votes are only accepted after the match is over. */
+    public synchronized RematchState voteRematch(String code, UUID userId) {
+        GameSession s = get(code);
+        List<String> seats = seatOrder.get(code);
+        String uid = userId.toString();
+        if (seats == null || !seats.contains(uid)) {
+            throw new IllegalMoveException("not seated in room " + code);
+        }
+        if (!s.isOver()) {
+            throw new IllegalMoveException("match still in progress");
+        }
+        var voters = rematchVotes.computeIfAbsent(code, k -> new java.util.LinkedHashSet<>());
+        voters.add(userId);
+        List<String> voterIds = voters.stream().map(UUID::toString).toList();
+        boolean ready = voters.size() >= seats.size();
+        return new RematchState(voters.size(), seats.size(), voterIds, ready);
+    }
+
+    public synchronized RematchState rematchState(String code) {
+        List<String> seats = seatOrder.get(code);
+        if (seats == null) throw new MatchNotFoundException(code);
+        var voters = rematchVotes.getOrDefault(code, java.util.Collections.emptySet());
+        List<String> voterIds = voters.stream().map(UUID::toString).toList();
+        boolean ready = voters.size() >= seats.size();
+        return new RematchState(voters.size(), seats.size(), voterIds, ready);
+    }
+
+    /** Prepare a rematch: return (config, seats) and end the current match so
+     *  {@link #start(String, GameConfig, List)} can be called for a fresh session. */
+    public synchronized Rematch prepareRematch(String code) {
+        List<String> seats = seatOrder.get(code);
+        GameConfig cfg = lastConfig.get(code);
+        if (seats == null || cfg == null) throw new MatchNotFoundException(code);
+        List<UUID> seatUuids = seats.stream().map(UUID::fromString).toList();
+        end(code);
+        return new Rematch(cfg, seatUuids);
+    }
+
+    public record Rematch(GameConfig config, List<UUID> seats) {}
 
     // ---------- views ----------
 
@@ -193,8 +317,26 @@ public class MatchService {
         GameSession s = get(code);
         for (var p : s.players()) {
             if (p.playerId().equals(userId.toString())) {
-                return Map.of("hand", p.hand().cards().stream()
+                Map<String, Object> v = new LinkedHashMap<>();
+                v.put("hand", p.hand().cards().stream()
                     .map(MatchService::cardJson).toList());
+                // Special timer — only meaningful during this player's turn.
+                Card special = p.hand().cards().stream()
+                    .filter(Card::isSpecial).findFirst().orElse(null);
+                if (special != null && s.currentPlayer().playerId().equals(p.playerId())) {
+                    v.put("specialTurnsRemaining", s.specialTurnsRemaining(special));
+                }
+                // "Choose your Zero": expose the current pin + valid targets.
+                if (special != null) {
+                    var pinnedRank = s.specialPinnedRank(special);
+                    if (pinnedRank != null) v.put("specialPinnedRank", pinnedRank.label());
+                    var pairs = s.validPairsFor(p.playerId());
+                    if (!pairs.isEmpty()) {
+                        v.put("validPairRanks",
+                            pairs.stream().map(com.zerocount.engine.model.Rank::label).toList());
+                    }
+                }
+                return v;
             }
         }
         throw new IllegalMoveException("not seated in room " + code);
@@ -220,6 +362,19 @@ public class MatchService {
             m.put("type", "discarded");
             m.put("playerId", d.playerId());
             m.put("card", cardJson(d.card()));
+        } else if (e instanceof GameEvent.SpecialDiscarded d) {
+            m.put("type", "special_discarded");
+            m.put("playerId", d.playerId());
+            m.put("card", cardJson(d.card()));
+        } else if (e instanceof GameEvent.SpecialPinned sp) {
+            m.put("type", "special_pinned");
+            m.put("playerId", sp.playerId());
+            m.put("cardId", sp.cardId());
+            m.put("rank", sp.rank().label());
+        } else if (e instanceof GameEvent.SpecialUnpinned su) {
+            m.put("type", "special_unpinned");
+            m.put("playerId", su.playerId());
+            m.put("cardId", su.cardId());
         } else if (e instanceof GameEvent.TurnPassed t) {
             m.put("type", "turn_passed");
             m.put("nextPlayerId", t.nextPlayerId());
@@ -261,10 +416,12 @@ public class MatchService {
     }
 
     static Map<String, Object> cardJson(Card c) {
-        return Map.of(
-            "id", c.id(),
-            "rank", c.rank().label(),
-            "suit", c.suit().name().toLowerCase(),
-            "value", c.value());
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", c.id());
+        m.put("rank", c.rank().label());
+        m.put("suit", c.suit().name().toLowerCase());
+        m.put("value", c.value());
+        m.put("isSpecial", c.isSpecial());
+        return m;
     }
 }

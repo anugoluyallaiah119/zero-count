@@ -146,6 +146,54 @@ public class MatchController {
             "type", "emote", "userId", userId.toString(), "kind", kind));
     }
 
+    /** Rematch vote. When every seated player has voted, the server ends the
+     *  finished match and starts a fresh session with the same config + seats. */
+    @MessageMapping("/room/{code}/rematch")
+    public void rematch(@DestinationVariable String code, Principal principal) {
+        UUID userId = UUID.fromString(principal.getName());
+        guardRateLimit(userId);
+        MatchService.RematchState st = matches.voteRematch(code, userId);
+        broadcaster.announce(code, Map.of(
+            "type", "rematch_state",
+            "votes", st.votes(),
+            "seats", st.seats(),
+            "voters", st.voters(),
+            "ready", st.ready()));
+        if (st.ready()) {
+            turnTimeouts.cancel(code);
+            MatchService.Rematch r = matches.prepareRematch(code);
+            List<GameEvent> events = matches.start(code, r.config(), r.seats());
+            broadcaster.fanOut(code, matches, events);
+            turnTimeouts.arm(code);
+        }
+    }
+
+    /** "Choose your Zero" pin/unpin the caller's Special.
+     *  Body {rank: "K"} pins, {clear: true} clears. */
+    public record PinSpecialCommand(String rank, Boolean clear) {}
+
+    @MessageMapping("/room/{code}/pin-special")
+    public void pinSpecial(@DestinationVariable String code,
+                           @Payload PinSpecialCommand cmd, Principal principal) {
+        UUID userId = UUID.fromString(principal.getName());
+        guardRateLimit(userId);
+        List<GameEvent> events;
+        if (cmd != null && Boolean.TRUE.equals(cmd.clear())) {
+            events = matches.clearSpecialPin(code, userId);
+        } else if (cmd != null && cmd.rank() != null && !cmd.rank().isEmpty()) {
+            com.zerocount.engine.model.Rank rank;
+            try {
+                rank = com.zerocount.engine.model.Rank.fromLabel(cmd.rank());
+            } catch (RuntimeException e) {
+                throw new MatchService.IllegalMoveException("unknown rank: " + cmd.rank());
+            }
+            events = matches.pinSpecial(code, userId, rank);
+        } else {
+            throw new MatchService.IllegalMoveException("pin-special needs rank or clear");
+        }
+        broadcaster.fanOut(code, matches, events);
+    }
+
     private Move toMove(String code, UUID userId, MoveCommand cmd) {
         if (cmd == null || cmd.type() == null) {
             throw new MatchService.IllegalMoveException("missing move type");

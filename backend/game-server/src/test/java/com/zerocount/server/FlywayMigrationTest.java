@@ -25,7 +25,8 @@ class FlywayMigrationTest {
         "wallets", "transactions", "contests", "contest_entries",
         "refresh_tokens", "analytics_events",
         "daily_reward_claims", "daily_challenge_progress", "device_tokens",
-        "notification_mutes", "notification_log", "shop_items", "owned_items", "sponsors"
+        "notification_mutes", "notification_log", "shop_items", "owned_items", "sponsors",
+        "player_gameplay_profile"
     );
 
     @Test
@@ -34,7 +35,7 @@ class FlywayMigrationTest {
             DataSource ds = pg.getPostgresDatabase();
             Flyway flyway = Flyway.configure().dataSource(ds).load();
             int applied = flyway.migrate().migrationsExecuted;
-            assertThat(applied).isEqualTo(5);
+            assertThat(applied).isEqualTo(7);
 
             try (Connection c = ds.getConnection()) {
                 // 1. All 15 tables exist (flyway_schema_history is Flyway's own).
