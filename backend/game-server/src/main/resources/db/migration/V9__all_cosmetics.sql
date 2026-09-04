@@ -92,7 +92,7 @@ INSERT INTO shop_items (id, kind, name, price_coins) VALUES
     ('st_gg',    'sticker', 'GG Champ',     0),
     ('st_nice',  'sticker', 'Well Played!', 0),
     ('st_wow',   'sticker', 'No Way!',      0),
-    ('st_fire',  'sticker', "Let's Go!",    0),
+    ('st_fire',  'sticker', 'Let''s Go!',   0),
     ('st_lol',   'sticker', 'Thanks!',      0),
     ('st_cry',   'sticker', 'Oops!',      900),
     ('st_zero',  'sticker', 'Boom!',       900),

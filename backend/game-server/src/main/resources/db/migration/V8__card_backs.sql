@@ -6,6 +6,14 @@
 -- Default 'cb_classic' is free (owned by every user on sign-up via trigger).
 -- ---------------------------------------------------------------------------
 
+-- Allow free default items (price_coins = 0)
+ALTER TABLE shop_items
+    DROP CONSTRAINT IF EXISTS shop_items_price_coins_check;
+
+ALTER TABLE shop_items
+    ADD CONSTRAINT shop_items_price_coins_check
+    CHECK (price_coins >= 0);
+
 -- Drop old placeholder rows that are no longer valid.
 DELETE FROM shop_items WHERE kind = 'card_back';
 

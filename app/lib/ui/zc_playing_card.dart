@@ -106,8 +106,6 @@ class ZcPlayingCard extends StatelessWidget {
 
     final Widget faceContent = faceDown
         ? ZcCardBackWidget(backId: cardBackId, width: width)
-            ),
-          )
         : Container(
             padding: EdgeInsets.fromLTRB(width * 0.08, width * 0.07, width * 0.08, width * 0.07),
             decoration: BoxDecoration(

@@ -1541,7 +1541,6 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                 ],
               ),
               child: ClipOval(child: _avatarWidget(asset, 52)),
-              ),
             ),
             Positioned(
               top: -2,

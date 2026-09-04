@@ -50,14 +50,14 @@ class ZeroCountApp extends ConsumerWidget {
       try { await ads.init(); } catch (_) {}
       try { await iap.init(); } catch (_) {}
     });
-    return ZcNotifBannerOverlay(
-      child: MaterialApp.router(
+    return MaterialApp.router(
       title: 'Zero Count',
       theme: ZeroCountTheme.theme,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) => ZcNotifBannerOverlay(
+        child: child ?? const SizedBox.shrink(),
       ),
-    );
     );
   }
 }

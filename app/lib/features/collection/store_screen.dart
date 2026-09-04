@@ -7,6 +7,7 @@ import '../../shared/monetization/iap_service.dart';
 import '../../ui/zc_bottom_nav.dart';
 import '../../ui/zc_theme.dart';
 import '../player/profile_repository.dart';
+import 'collection_data.dart';
 import 'collection_grid_screen.dart';
 import 'collection_widgets.dart';
 import 'themes_screen.dart';
@@ -591,18 +592,22 @@ class _PowerYourGameBanner extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    _MiniFeatureChip(
-                      icon: 'assets/art/coin.png',
-                      title: 'Play More',
-                      subtitle: 'Win Bigger',
-                      accent: const Color(0xFFF59E0B),
+                    Expanded(
+                      child: _MiniFeatureChip(
+                        icon: 'assets/art/coin.png',
+                        title: 'Play More',
+                        subtitle: 'Win Bigger',
+                        accent: const Color(0xFFF59E0B),
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    _MiniFeatureChip(
-                      icon: 'assets/art/gem.png',
-                      title: 'Unlock More',
-                      subtitle: 'Stand Out',
-                      accent: LcColors.purple,
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _MiniFeatureChip(
+                        icon: 'assets/art/gem.png',
+                        title: 'Unlock More',
+                        subtitle: 'Stand Out',
+                        accent: LcColors.purple,
+                      ),
                     ),
                   ],
                 ),
@@ -666,23 +671,29 @@ class _MiniFeatureChip extends StatelessWidget {
                     Icon(Icons.star_rounded, size: 12, color: accent)),
           ),
           const SizedBox(width: 5),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(title,
-                  style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      color: LcColors.textDark,
-                      height: 1.1)),
-              Text(subtitle,
-                  style: const TextStyle(
-                      fontSize: 9,
-                      color: LcColors.textMuted,
-                      fontWeight: FontWeight.w600,
-                      height: 1.1)),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: LcColors.textDark,
+                        height: 1.1)),
+                Text(subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 9,
+                        color: LcColors.textMuted,
+                        fontWeight: FontWeight.w600,
+                        height: 1.1)),
+              ],
+            ),
           ),
         ],
       ),

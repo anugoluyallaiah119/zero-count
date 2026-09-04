@@ -51,7 +51,7 @@ CREATE TABLE shop_items (
     kind       VARCHAR(16) NOT NULL
                CHECK (kind IN ('card_back', 'table_theme', 'mascot')),
     name       VARCHAR(60) NOT NULL,
-    price_coins INTEGER NOT NULL CHECK (price_coins > 0)
+    price_coins INTEGER NOT NULL CHECK (price_coins >= 0)
 );
 CREATE TABLE owned_items (
     user_id UUID NOT NULL REFERENCES users(id),

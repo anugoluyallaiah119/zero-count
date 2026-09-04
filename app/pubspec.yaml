@@ -18,7 +18,7 @@ dependencies:
   google_fonts: ^6.2.1
   firebase_core: ^3.0.0
   firebase_messaging: ^15.0.0
-  unity_ads_plugin: ^4.1.0
+  unity_ads_plugin: ^0.5.0
   in_app_purchase: ^3.2.0
 
 dev_dependencies:

@@ -475,20 +475,15 @@ class _ModeCard extends StatelessWidget {
                       Text('Game Time', style: ZcText.body(11)),
                       const Spacer(),
                       Flexible(
-                        child: Text.rich(
-                          TextSpan(children: [
-                            TextSpan(
-                                text: time.replaceAll(' min', ''),
-                                style: const TextStyle(
-                                    color: ZcColors.gold,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800)),
-                            TextSpan(
-                                text: ' min',
-                                style: ZcText.body(10.5,
-                                    color: ZcColors.gold)),
-                          ]),
-                          overflow: TextOverflow.ellipsis,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            time,
+                            style: const TextStyle(
+                                color: ZcColors.gold,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800),
+                          ),
                         ),
                       ),
                     ]),
@@ -550,46 +545,148 @@ class _ModeCard extends StatelessWidget {
   }
 }
 
-/// GAME RULES strip — five mini tiles, all vector-rendered.
+/// Compact mini card specifically tailored for Rule badge previews without any overflow.
+class _RuleMiniFan3 extends StatelessWidget {
+  const _RuleMiniFan3({
+    required this.c1,
+    required this.c2,
+    required this.c3,
+    this.overlay,
+  });
+
+  final (String, ZcSuit, int) c1;
+  final (String, ZcSuit, int) c2;
+  final (String, ZcSuit, int) c3;
+  final Widget? overlay;
+
+  @override
+  Widget build(BuildContext context) {
+    const cardW = 19.0;
+    return SizedBox(
+      width: 44,
+      height: 36,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            left: 0,
+            top: 2,
+            child: Transform.rotate(
+              angle: -0.15,
+              child: ZcPlayingCard(
+                rank: c1.$1,
+                suit: c1.$2,
+                value: c1.$3,
+                width: cardW,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 12,
+            top: 0,
+            child: ZcPlayingCard(
+              rank: c2.$1,
+              suit: c2.$2,
+              value: c2.$3,
+              width: cardW,
+            ),
+          ),
+          Positioned(
+            left: 24,
+            top: 2,
+            child: Transform.rotate(
+              angle: 0.15,
+              child: ZcPlayingCard(
+                rank: c3.$1,
+                suit: c3.$2,
+                value: c3.$3,
+                width: cardW,
+              ),
+            ),
+          ),
+          if (overlay != null)
+            Positioned.fill(
+              child: Center(child: overlay),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// GAME RULES strip — five mini tiles, beautifully scaled and cleanly formatted.
 class _RulesPanel extends StatelessWidget {
   const _RulesPanel();
 
   @override
   Widget build(BuildContext context) {
-    Widget tile(Widget visual, Widget caption, {bool danger = false}) {
+    Widget tile({
+      required Widget visual,
+      required String topText,
+      required String bottomText,
+      bool danger = false,
+      Color? topColor,
+      Color? bottomColor,
+    }) {
       return Expanded(
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 3.5),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+          margin: const EdgeInsets.symmetric(horizontal: 2.5),
+          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
           decoration: BoxDecoration(
-            color: ZcColors.panelInput.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(14),
+            color: danger
+                ? ZcColors.errorRed.withValues(alpha: 0.15)
+                : ZcColors.panelInput.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(13),
             border: Border.all(
-                color: danger
-                    ? ZcColors.errorRed
-                    : const Color(0x2EFFFFFF),
-                width: danger ? 1.6 : 1.1),
+              color: danger
+                  ? ZcColors.errorRed.withValues(alpha: 0.8)
+                  : const Color(0x2EFFFFFF),
+              width: danger ? 1.4 : 1.0,
+            ),
           ),
-          child: Column(children: [
-            SizedBox(height: 52, child: Center(child: visual)),
-            const SizedBox(height: 8),
-            caption,
-          ]),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 38,
+                child: Center(child: visual),
+              ),
+              const SizedBox(height: 6),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  topText,
+                  style: TextStyle(
+                    color: topColor ?? (danger ? ZcColors.errorRed : ZcColors.gold),
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 1.5),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  bottomText,
+                  style: TextStyle(
+                    color: bottomColor ?? (danger ? const Color(0xFFFFA4A4) : Colors.white70),
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    Text cap(List<TextSpan> spans) => Text.rich(
-          TextSpan(children: spans),
-          textAlign: TextAlign.center,
-          style: ZcText.body(9.5, color: Colors.white).copyWith(height: 1.3),
-        );
-
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
       decoration: BoxDecoration(
         color: ZcColors.panelPurple.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0x2EFFFFFF), width: 1.1),
       ),
       child: Column(
@@ -603,81 +700,88 @@ class _RulesPanel extends StatelessWidget {
                   overflow: TextOverflow.ellipsis, style: ZcText.body(10.5)),
             ),
           ]),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               tile(
-                Image.asset('assets/art/icon_aces.png', height: 48),
-                cap([
-                  const TextSpan(text: '3 or more cards with the same number = '),
-                  TextSpan(
-                      text: 'ZERO',
-                      style: ZcText.body(9.5,
-                          color: ZcColors.gold, weight: FontWeight.w800)),
-                ]),
-              ),
-              tile(
-                const ZcPlayingCard(
-                    rank: 'A', suit: ZcSuit.spades, value: 1, width: 34),
-                cap([
-                  TextSpan(
-                      text: 'A = 1',
-                      style: ZcText.body(10.5,
-                          color: ZcColors.gold, weight: FontWeight.w800)),
-                ]),
-              ),
-              tile(
-                const ZcCardFan(
-                  cards: [
-                    ('J', ZcSuit.clubs, 10),
-                    ('Q', ZcSuit.hearts, 10),
-                    ('K', ZcSuit.clubs, 10),
-                  ],
-                  cardWidth: 24,
-                  overlap: 0.55,
+                visual: Image.asset(
+                  'assets/art/icon_aces.png',
+                  height: 36,
+                  fit: BoxFit.contain,
                 ),
-                cap([
-                  TextSpan(
-                      text: 'J, Q, K = 10',
-                      style: ZcText.body(9.5,
-                          color: ZcColors.gold, weight: FontWeight.w800)),
-                ]),
+                topText: '3+ Same',
+                bottomText: '= ZERO',
+                topColor: Colors.white,
+                bottomColor: ZcColors.gold,
               ),
               tile(
-                Stack(alignment: Alignment.center, children: [
-                  const ZcCardFan(
-                    cards: [
-                      ('3', ZcSuit.clubs, 3),
-                      ('4', ZcSuit.spades, 4),
-                      ('5', ZcSuit.hearts, 5),
-                    ],
-                    cardWidth: 24,
-                    overlap: 0.55,
+                visual: const ZcPlayingCard(
+                  rank: 'A',
+                  suit: ZcSuit.spades,
+                  value: 1,
+                  width: 25,
+                ),
+                topText: 'A = 1',
+                bottomText: 'Low Card',
+                topColor: ZcColors.gold,
+                bottomColor: Colors.white70,
+              ),
+              tile(
+                visual: const _RuleMiniFan3(
+                  c1: ('J', ZcSuit.clubs, 10),
+                  c2: ('Q', ZcSuit.hearts, 10),
+                  c3: ('K', ZcSuit.diamonds, 10),
+                ),
+                topText: 'J, Q, K',
+                bottomText: '= 10 pts',
+                topColor: ZcColors.gold,
+                bottomColor: Colors.white70,
+              ),
+              tile(
+                visual: _RuleMiniFan3(
+                  c1: const ('3', ZcSuit.clubs, 3),
+                  c2: const ('4', ZcSuit.spades, 4),
+                  c3: const ('5', ZcSuit.hearts, 5),
+                  overlay: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                      color: Color(0xD9100528),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.block_rounded,
+                      color: ZcColors.errorRed,
+                      size: 24,
+                    ),
                   ),
-                  const Icon(Icons.block_rounded,
-                      color: ZcColors.errorRed, size: 40),
-                ]),
-                cap([
-                  const TextSpan(text: 'Sequences are '),
-                  TextSpan(
-                      text: 'NOT',
-                      style: ZcText.body(9.5,
-                          color: ZcColors.errorRed, weight: FontWeight.w800)),
-                  const TextSpan(text: ' allowed'),
-                ]),
+                ),
+                topText: 'NO RUNS',
+                bottomText: 'No sequences',
                 danger: true,
               ),
               tile(
-                const Icon(Icons.flag_rounded,
-                    color: ZcColors.gemPurple, size: 38),
-                cap([
-                  const TextSpan(text: 'Lowest count '),
-                  TextSpan(
-                      text: 'wins!',
-                      style: ZcText.body(9.5,
-                          color: ZcColors.gold, weight: FontWeight.w800)),
-                ]),
+                visual: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: ZcColors.gemPurple.withValues(alpha: 0.35),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: ZcColors.neonPurple.withValues(alpha: 0.6),
+                      width: 1,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.emoji_events_rounded,
+                    color: ZcColors.gold,
+                    size: 19,
+                  ),
+                ),
+                topText: 'LOWEST',
+                bottomText: 'Score Wins',
+                topColor: ZcColors.gold,
+                bottomColor: Colors.white,
               ),
             ],
           ),
