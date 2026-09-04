@@ -109,6 +109,11 @@ class LiveMatchController extends Notifier<LiveMatchState?> {
             specialPinnedRank: () => pinned,
             validPairRanks: pairs,
             myCardBackId: cardBack,
+            myAvatarId: j['equippedAvatar'] as String? ?? cur.myAvatarId,
+            myThemeId: j['equippedTheme'] as String? ?? cur.myThemeId,
+            mySpecialSkinId: j['equippedSpecial'] as String? ?? cur.mySpecialSkinId,
+            myEffectId: j['equippedEffect'] as String? ?? cur.myEffectId,
+            myStickerSetId: j['equippedStickerSet'] as String? ?? cur.myStickerSetId,
           );
         }
       },

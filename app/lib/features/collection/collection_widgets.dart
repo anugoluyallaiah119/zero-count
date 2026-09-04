@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../ui/zc_card_backs.dart';
+import '../../ui/zc_cosmetics.dart';
 import '../../ui/zc_theme.dart';
 import '../auth/avatar_catalog.dart';
 import '../player/profile_repository.dart';
@@ -354,8 +355,9 @@ class CollectionGridCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.read(collectionProvider.notifier);
-    // Card backs use code-drawn painters; all others fall back to image asset.
+    // Card backs use code-drawn painters; avatars use ZcAvatars; all others fallback.
     final isCardBack = category == 'cardBacks';
+    final isAvatar = category == 'avatars';
     return GestureDetector(
       onTap: () async {
         if (!item.owned) {
@@ -379,8 +381,10 @@ class CollectionGridCard extends ConsumerWidget {
           }
         } else {
           ctrl.equip(category, item.id);
-          if (isCardBack) {
-            // Persist equip to server.
+          if (isCardBack || category == 'themes' || category == 'avatars' ||
+              category == 'specialCards' || category == 'effects' ||
+              category == 'stickers') {
+            // Persist equip to server for all cosmetic categories.
             try {
               await ref.read(shopRepositoryProvider).equip(item.id);
             } catch (_) {}
@@ -413,34 +417,39 @@ class CollectionGridCard extends ConsumerWidget {
                               width: box.maxWidth,
                             ),
                           )
-                        : Image.asset(
-                            item.asset,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            errorBuilder: (_, __, ___) => Container(
-                              color: const Color(0xFF2E1065),
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.style_rounded,
-                                        color: Color(0xFFFDE047), size: 22),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      item.name,
-                                      style: const TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 8,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                      maxLines: 1,
+                        : isAvatar
+                            ? LayoutBuilder(
+                                builder: (context, box) => ZcAvatars.forId(
+                                    item.asset, box.maxWidth),
+                              )
+                            : Image.asset(
+                                item.asset,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: const Color(0xFF2E1065),
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.style_rounded,
+                                            color: Color(0xFFFDE047), size: 22),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          item.name,
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 8,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                          maxLines: 1,
+                                        ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
                   ),
                 ),
                 Positioned(

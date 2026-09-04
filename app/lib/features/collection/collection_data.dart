@@ -129,87 +129,21 @@ class CollectionCatalog {
   ];
 
   static const avatars = [
-    CollectionItem(
-        id: 'av_cyber',
-        name: 'Cyber Zero',
-        asset: 'assets/art/av_cyber.png',
-        rarity: ZcRarity.epic,
-        owned: true,
-        equipped: true),
-    CollectionItem(
-        id: 'av_ace',
-        name: 'Default',
-        asset: 'assets/art/av_ace.png',
-        rarity: ZcRarity.epic,
-        owned: true),
-    CollectionItem(
-        id: 'av_fox',
-        name: 'Neon Kid',
-        asset: 'assets/art/av_fox.png',
-        rarity: ZcRarity.epic,
-        owned: true),
-    CollectionItem(
-        id: 'av_robot',
-        name: 'Shadow',
-        asset: 'assets/art/av_robot.png',
-        rarity: ZcRarity.epic,
-        owned: true),
-    CollectionItem(
-        id: 'av_queen',
-        name: 'Aurora',
-        asset: 'assets/art/av_queen.png',
-        rarity: ZcRarity.epic,
-        owned: true),
-    CollectionItem(
-        id: 'av_phoenix',
-        name: 'Phoenix',
-        asset: 'assets/art/av_phoenix.png',
-        rarity: ZcRarity.legendary),
-    CollectionItem(
-        id: 'av_ninja',
-        name: 'Ace',
-        asset: 'assets/art/av_ninja.png',
-        rarity: ZcRarity.epic),
-    CollectionItem(
-        id: 'av_panda',
-        name: 'Chill Zero',
-        asset: 'assets/art/av_panda.png',
-        rarity: ZcRarity.rare),
-    CollectionItem(
-        id: 'av_alien',
-        name: 'Quantum',
-        asset: 'assets/art/av_alien.png',
-        rarity: ZcRarity.epic),
-    CollectionItem(
-        id: 'av_owl',
-        name: 'Cosmic Girl',
-        asset: 'assets/art/av_owl.png',
-        rarity: ZcRarity.legendary),
-    CollectionItem(
-        id: 'av_king',
-        name: 'Retro Player',
-        asset: 'assets/art/av_king.png',
-        rarity: ZcRarity.rare),
-    CollectionItem(
-        id: 'av_knight',
-        name: 'Samurai Zero',
-        asset: 'assets/art/av_knight.png',
-        rarity: ZcRarity.legendary),
-    CollectionItem(
-        id: 'av_wizard',
-        name: 'Techie',
-        asset: 'assets/art/av_wizard.png',
-        rarity: ZcRarity.rare),
-    CollectionItem(
-        id: 'av_tiger',
-        name: 'Pumpkin Head',
-        asset: 'assets/art/av_tiger.png',
-        rarity: ZcRarity.rare),
-    CollectionItem(
-        id: 'av_dragon',
-        name: 'Ice Zero',
-        asset: 'assets/art/av_dragon.png',
-        rarity: ZcRarity.rare),
+    CollectionItem(id: 'av_default',  name: 'Default Ace',     asset: 'av_default',  rarity: ZcRarity.rare,      price: 0,     owned: true, equipped: true),
+    CollectionItem(id: 'av_cyber',    name: 'Cyber Zero',       asset: 'av_cyber',    rarity: ZcRarity.epic,      price: 900,   owned: true),
+    CollectionItem(id: 'av_fox',      name: 'Neon Kid',         asset: 'av_fox',      rarity: ZcRarity.rare,      price: 900),
+    CollectionItem(id: 'av_robot',    name: 'Shadow Bot',       asset: 'av_robot',    rarity: ZcRarity.epic,      price: 1900),
+    CollectionItem(id: 'av_queen',    name: 'Aurora Queen',     asset: 'av_queen',    rarity: ZcRarity.epic,      price: 1900),
+    CollectionItem(id: 'av_panda',    name: 'Chill Panda',      asset: 'av_panda',    rarity: ZcRarity.rare,      price: 2900),
+    CollectionItem(id: 'av_ninja',    name: 'Silent Ace',       asset: 'av_ninja',    rarity: ZcRarity.epic,      price: 2900),
+    CollectionItem(id: 'av_king',     name: 'Retro King',       asset: 'av_king',     rarity: ZcRarity.rare,      price: 4900),
+    CollectionItem(id: 'av_wizard',   name: 'Pixel Wizard',     asset: 'av_wizard',   rarity: ZcRarity.rare,      price: 4900),
+    CollectionItem(id: 'av_tiger',    name: 'Tiger Blaze',      asset: 'av_tiger',    rarity: ZcRarity.epic,      price: 7900),
+    CollectionItem(id: 'av_owl',      name: 'Cosmic Owl',       asset: 'av_owl',      rarity: ZcRarity.epic,      price: 7900),
+    CollectionItem(id: 'av_alien',    name: 'Quantum Ghost',    asset: 'av_alien',    rarity: ZcRarity.epic,      price: 7900),
+    CollectionItem(id: 'av_knight',   name: 'Samurai Zero',     asset: 'av_knight',   rarity: ZcRarity.legendary, price: 9900),
+    CollectionItem(id: 'av_phoenix',  name: 'Phoenix Rise',     asset: 'av_phoenix',  rarity: ZcRarity.legendary, price: 14900),
+    CollectionItem(id: 'av_dragon',   name: 'Ice Dragon',       asset: 'av_dragon',   rarity: ZcRarity.legendary, price: 19900),
   ];
 
   static const themes = [

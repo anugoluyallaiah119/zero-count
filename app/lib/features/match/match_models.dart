@@ -80,6 +80,11 @@ class LiveMatchState {
     this.specialPinnedRank,
     this.validPairRanks = const [],
     this.myCardBackId = 'cb_classic',
+    this.myAvatarId = 'av_default',
+    this.myThemeId = 'th_brazil_carnival',
+    this.mySpecialSkinId = 'sp_classic',
+    this.myEffectId = 'ef_lightning',
+    this.myStickerSetId = 'st_gg',
     this.error,
     this.roundResult,
     this.matchResult,
@@ -137,6 +142,11 @@ class LiveMatchState {
   final List<String> validPairRanks;
   /// Card back id the local player has equipped (from handView).
   final String myCardBackId;
+  final String myAvatarId;
+  final String myThemeId;
+  final String mySpecialSkinId;
+  final String myEffectId;
+  final String myStickerSetId;
   final String? error;
   final Map<String, dynamic>? roundResult;
   final Map<String, dynamic>? matchResult;
@@ -196,6 +206,11 @@ class LiveMatchState {
     String? Function()? specialPinnedRank,
     List<String>? validPairRanks,
     String? myCardBackId,
+    String? myAvatarId,
+    String? myThemeId,
+    String? mySpecialSkinId,
+    String? myEffectId,
+    String? myStickerSetId,
     String? Function()? error,
     Map<String, dynamic>? Function()? roundResult,
     Map<String, dynamic>? Function()? matchResult,
@@ -227,6 +242,11 @@ class LiveMatchState {
             : this.specialPinnedRank,
         validPairRanks: validPairRanks ?? this.validPairRanks,
         myCardBackId: myCardBackId ?? this.myCardBackId,
+        myAvatarId: myAvatarId ?? this.myAvatarId,
+        myThemeId: myThemeId ?? this.myThemeId,
+        mySpecialSkinId: mySpecialSkinId ?? this.mySpecialSkinId,
+        myEffectId: myEffectId ?? this.myEffectId,
+        myStickerSetId: myStickerSetId ?? this.myStickerSetId,
         error: error != null ? error() : this.error,
         roundResult: roundResult != null ? roundResult() : this.roundResult,
         matchResult: matchResult != null ? matchResult() : this.matchResult,

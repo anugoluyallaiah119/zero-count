@@ -114,6 +114,12 @@ class PlayAreaTheme {
 
   static PlayAreaTheme randomFor(int playerCount) => brazilCarnival;
 
+  /// Returns the theme matching [themeId], falling back to brazilCarnival.
+  static PlayAreaTheme forId(String? themeId) {
+    if (themeId == null) return brazilCarnival;
+    return all.firstWhere((t) => t.id == themeId, orElse: () => brazilCarnival);
+  }
+
   @override
   bool operator ==(Object other) =>
       other is PlayAreaTheme && other.id == id;

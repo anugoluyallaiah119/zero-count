@@ -342,13 +342,24 @@ public class MatchService {
                             pairs.stream().map(com.zerocount.engine.model.Rank::label).toList());
                     }
                 }
-                // Card back equipped by this player.
+                // All equipped cosmetics — one DB call to fetch them together.
                 if (db != null) {
                     try {
-                        String back = db.queryForObject(
-                            "SELECT equipped_card_back FROM users WHERE id = ?",
-                            String.class, UUID.fromString(p.playerId()));
-                        if (back != null) v.put("equippedCardBack", back);
+                        db.query("""
+                            SELECT equipped_card_back, equipped_avatar,
+                                   equipped_theme, equipped_special,
+                                   equipped_effect, equipped_sticker_set
+                            FROM users WHERE id = ?
+                            """, rs -> {
+                            if (rs.next()) {
+                                putIfSet(v, "equippedCardBack",    rs.getString("equipped_card_back"));
+                                putIfSet(v, "equippedAvatar",      rs.getString("equipped_avatar"));
+                                putIfSet(v, "equippedTheme",       rs.getString("equipped_theme"));
+                                putIfSet(v, "equippedSpecial",     rs.getString("equipped_special"));
+                                putIfSet(v, "equippedEffect",      rs.getString("equipped_effect"));
+                                putIfSet(v, "equippedStickerSet",  rs.getString("equipped_sticker_set"));
+                            }
+                        }, UUID.fromString(p.playerId()));
                     } catch (RuntimeException ignored) {}
                 }
                 return v;
@@ -428,6 +439,10 @@ public class MatchService {
             throw new IllegalArgumentException("unknown event " + e);
         }
         return m;
+    }
+
+    private static void putIfSet(Map<String, Object> map, String key, String val) {
+        if (val != null && !val.isEmpty()) map.put(key, val);
     }
 
     static Map<String, Object> cardJson(Card c) {

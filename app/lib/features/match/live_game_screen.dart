@@ -37,7 +37,8 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
   int _handSize = 7;
   int? _pickerShownForCardId;
   late final LiveMatchController _controller;
-  late final PlayAreaTheme _theme;
+  // Theme is updated from the handView once the socket delivers cosmetics.
+  PlayAreaTheme _theme = PlayAreaTheme.brazilCarnival;
 
   /// Active card flight overlay (draw/take reveal or discard fly).
   _CardFlight? _flight;
@@ -45,7 +46,6 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
   @override
   void initState() {
     super.initState();
-    _theme = PlayAreaTheme.randomFor(4);
     _controller = ref.read(liveMatchProvider.notifier);
     Future.microtask(() => _controller.connect(widget.code));
   }
@@ -122,6 +122,14 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
     ref.listen(liveMatchProvider, (prev, next) {
       if (next == null) return;
       _watchFlights(prev, next);
+      // Apply the player's equipped theme when we first receive cosmetics.
+      if ((prev == null || prev.myThemeId != next.myThemeId)) {
+        final equipped = PlayAreaTheme.forId(next.myThemeId);
+        if (equipped != _theme) {
+          WidgetsBinding.instance.addPostFrameCallback(
+              (_) { if (mounted) setState(() => _theme = equipped); });
+        }
+      }
       final newEvents = next.lastEvents.length > (prev?.lastEvents.length ?? 0)
           ? next.lastEvents.sublist(prev?.lastEvents.length ?? 0)
           : const <String>[];

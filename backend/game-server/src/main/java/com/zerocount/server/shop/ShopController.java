@@ -102,11 +102,20 @@ public class ShopController {
         if (owned == null || owned == 0)
             throw new IllegalArgumentException("item not owned");
         String kind = (String) rows.get(0).get("kind");
-        if ("card_back".equals(kind)) {
-            db.update("UPDATE users SET equipped_card_back = ? WHERE id = ?",
+        String col = switch (kind) {
+            case "card_back"    -> "equipped_card_back";
+            case "avatar"       -> "equipped_avatar";
+            case "table_theme"  -> "equipped_theme";
+            case "special_card" -> "equipped_special";
+            case "effect"       -> "equipped_effect";
+            case "sticker"      -> "equipped_sticker_set";
+            default -> null;
+        };
+        if (col != null) {
+            db.update("UPDATE users SET " + col + " = ? WHERE id = ?",
                 body.itemId(), userId);
         }
-        return Map.of("equipped", true, "itemId", body.itemId());
+        return Map.of("equipped", true, "itemId", body.itemId(), "kind", kind);
     }
 
     @ExceptionHandler(WalletService.InsufficientFundsException.class)
