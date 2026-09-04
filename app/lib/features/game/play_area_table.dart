@@ -577,6 +577,8 @@ class _PlayAreaTableState extends State<PlayAreaTable>
               ),
               _buildHandArea(),
               _buildActionBar(),
+              _buildInfoStrip(),
+              _buildChatBar(),
             ],
           ),
         ),
@@ -657,6 +659,61 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                     ),
                   ),
                 ],
+              ),
+            ],
+          ),
+
+          const Spacer(),
+
+          // ZERO COUNT center logo
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RichText(
+                text: const TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'ZERO',
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    TextSpan(
+                      text: ' C',
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    TextSpan(
+                      text: '0',
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFFFDE047),
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    TextSpan(
+                      text: 'UNT',
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -785,27 +842,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
       padding: const EdgeInsets.fromLTRB(14, 2, 14, 2),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: widget.onEmoji,
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: const Color(0x3310062E),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: const Color(0x33FFFFFF),
-                  width: 1,
-                ),
-              ),
-              child: const Center(
-                child: Text('😄', style: TextStyle(fontSize: 16)),
-              ),
-            ),
-          ),
-          const Spacer(),
-
-          // Target Score Pill
+          // Target Score Pill — matches mockup: dark pill center
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             decoration: BoxDecoration(
@@ -849,42 +886,33 @@ class _PlayAreaTableState extends State<PlayAreaTable>
 
           const Spacer(),
 
-          // SORT button
+          // SORT button — green solid like mockup
           GestureDetector(
             key: const Key('sortButton'),
             onTap: widget.onSort,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0x3310062E),
+                color: const Color(0xFF166534),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: widget.sorted
-                      ? const Color(0xFFFDC421)
-                      : const Color(0x448B5CF6),
-                  width: 1.2,
-                ),
+                border: Border.all(color: const Color(0xFF22C55E), width: 1.2),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     Icons.swap_vert_rounded,
-                    color: widget.sorted
-                        ? const Color(0xFFFDC421)
-                        : Colors.white,
+                    color: widget.sorted ? const Color(0xFFFDC421) : Colors.white,
                     size: 15,
                   ),
-                  const SizedBox(width: 3),
+                  const SizedBox(width: 4),
                   Text(
                     'SORT',
                     style: TextStyle(
                       fontFamily: 'Nunito',
                       fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: widget.sorted
-                          ? const Color(0xFFFDC421)
-                          : Colors.white,
+                      fontWeight: FontWeight.w900,
+                      color: widget.sorted ? const Color(0xFFFDC421) : Colors.white,
                     ),
                   ),
                 ],
@@ -893,25 +921,18 @@ class _PlayAreaTableState extends State<PlayAreaTable>
           ),
           const SizedBox(width: 6),
 
-          // Settings / Tutorial Button
+          // Settings gear
           GestureDetector(
             onTap: widget.onSettings,
             child: Container(
-              width: 30,
-              height: 30,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 color: const Color(0x3310062E),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: const Color(0x33FFFFFF),
-                  width: 1,
-                ),
+                border: Border.all(color: const Color(0x33FFFFFF), width: 1),
               ),
-              child: const Icon(
-                Icons.settings_rounded,
-                color: Colors.white70,
-                size: 16,
-              ),
+              child: const Icon(Icons.settings_rounded, color: Colors.white70, size: 16),
             ),
           ),
         ],
@@ -1000,72 +1021,91 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                   if (widget.theme.showHintGroup) ...[
                     // Floating Hint & Group Dock
                     Positioned(
-                      right: 12,
-                      top: 140,
+                      right: 10,
+                      top: 120,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // HINT button with badge count
                           GestureDetector(
                             onTap: () => widget.onHint?.call(),
-                            child: Container(
-                              width: 48,
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xDD0D4A2B),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFF22C55E), width: 1.2),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x3322C55E),
-                                    blurRadius: 8,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Container(
+                                  width: 52,
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xEE0D4A2B),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: const Color(0xFF22C55E), width: 1.5),
+                                    boxShadow: const [BoxShadow(color: Color(0x4422C55E), blurRadius: 10)],
                                   ),
-                                ],
-                              ),
-                              child: const Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.lightbulb_rounded, color: Color(0xFFFDE047), size: 18),
-                                  SizedBox(height: 2),
-                                  Text(
-                                    'HINT',
-                                    style: TextStyle(
-                                      fontFamily: 'Nunito',
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
+                                  child: const Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.lightbulb_rounded, color: Color(0xFFFDE047), size: 20),
+                                      SizedBox(height: 3),
+                                      Text(
+                                        'HINT',
+                                        style: TextStyle(
+                                          fontFamily: 'Nunito',
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // Badge — "3" count like mockup
+                                Positioned(
+                                  top: -5,
+                                  right: -5,
+                                  child: Container(
+                                    width: 18,
+                                    height: 18,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF22C55E),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: const Text(
+                                      '3',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 8),
+                          // GROUP button
                           GestureDetector(
                             onTap: () => widget.onGroup?.call(),
                             child: Container(
-                              width: 48,
-                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              width: 52,
+                              padding: const EdgeInsets.symmetric(vertical: 8),
                               decoration: BoxDecoration(
-                                color: const Color(0xDD0D4A2B),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFF22C55E), width: 1.2),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x3322C55E),
-                                    blurRadius: 8,
-                                  ),
-                                ],
+                                color: const Color(0xEE0D4A2B),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFF22C55E), width: 1.5),
+                                boxShadow: const [BoxShadow(color: Color(0x4422C55E), blurRadius: 10)],
                               ),
                               child: const Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.style_rounded, color: Colors.white, size: 18),
-                                  SizedBox(height: 2),
+                                  Icon(Icons.style_rounded, color: Colors.white, size: 20),
+                                  SizedBox(height: 3),
                                   Text(
                                     'GROUP',
                                     style: TextStyle(
                                       fontFamily: 'Nunito',
-                                      fontSize: 8.5,
+                                      fontSize: 9,
                                       fontWeight: FontWeight.w900,
                                       color: Colors.white,
                                     ),
@@ -1371,70 +1411,56 @@ class _PlayAreaTableState extends State<PlayAreaTable>
       subtitle = 'Opponent is thinking';
     }
 
-    return Container(
+    // Mockup: green title text, white subtitle, laurel emoji decorations
+    return Column(
       key: const Key('turnBanner'),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xDD09031E),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: active
-              ? const Color(0xFF22C55E)
-              : const Color(0x33A855F7),
-          width: 1.4,
-        ),
-        boxShadow: [
-          if (active)
-            BoxShadow(
-              color: const Color(0xFF22C55E).withValues(alpha: 0.35),
-              blurRadius: 14,
-            ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.spa_rounded,
-            color: active ? const Color(0xFF22C55E) : Colors.white30,
-            size: 18,
-          ),
-          const SizedBox(width: 8),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.6,
-                  color: active
-                      ? const Color(0xFFFDC421)
-                      : Colors.white,
-                ),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '🌿',
+              style: TextStyle(
+                fontSize: 14,
+                color: active ? null : Colors.white24,
               ),
-              if (subtitle.isNotEmpty)
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white.withValues(alpha: 0.85),
-                  ),
-                ),
-            ],
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.4,
+                color: active ? const Color(0xFF4ADE80) : Colors.white54,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '🌿',
+              style: TextStyle(
+                fontSize: 14,
+                color: active ? null : Colors.white24,
+              ),
+            ),
+          ],
+        ),
+        if (subtitle.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              subtitle,
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                color: Colors.white.withValues(alpha: 0.75),
+              ),
+            ),
           ),
-          const SizedBox(width: 8),
-          Icon(
-            Icons.spa_rounded,
-            color: active ? const Color(0xFF22C55E) : Colors.white30,
-            size: 18,
-          ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -2399,6 +2425,213 @@ class _PlayAreaTableState extends State<PlayAreaTable>
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 1, 16, 6),
       child: content,
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // 10. Info Strip — HOW SHOW WORKS / ROUND STAKE / GAME PROGRESS
+  // -------------------------------------------------------------------------
+
+  Widget _buildInfoStrip() {
+    final completedRounds = (widget.round - 1).clamp(0, 10);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xCC09031E),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0x22FFFFFF), width: 1),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // HOW SHOW WORKS
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'HOW SHOW WORKS',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFFFFFFFF),
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  _infoLine('🔍', 'Declare when you think their count is low.'),
+                  _infoLine('🏳', 'All players reveal'),
+                  _infoLine('🏆', 'Closest to Zero wins the round!'),
+                ],
+              ),
+            ),
+            VerticalDivider(color: Colors.white.withValues(alpha: 0.1), width: 16),
+            // ROUND STAKE
+            SizedBox(
+              width: 80,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'ROUND STAKE',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFFFFFFFF),
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      const Text('Victory', style: TextStyle(fontFamily: 'Nunito', fontSize: 9, color: Colors.white60)),
+                      const Spacer(),
+                      const Text('+100 ', style: TextStyle(fontFamily: 'Nunito', fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF4ADE80))),
+                      Image.asset('assets/art/coin.png', width: 10, height: 10, errorBuilder: (_, __, ___) => const Text('🪙', style: TextStyle(fontSize: 8))),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      const Text('Penalty', style: TextStyle(fontFamily: 'Nunito', fontSize: 9, color: Colors.white60)),
+                      const Spacer(),
+                      const Text('-100 ', style: TextStyle(fontFamily: 'Nunito', fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFFEF4444))),
+                      Image.asset('assets/art/coin.png', width: 10, height: 10, errorBuilder: (_, __, ___) => const Text('🪙', style: TextStyle(fontSize: 8))),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            VerticalDivider(color: Colors.white.withValues(alpha: 0.1), width: 16),
+            // GAME PROGRESS
+            SizedBox(
+              width: 80,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'GAME PROGRESS',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFFFFFFFF),
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  // Dot progress bar
+                  Row(
+                    children: [
+                      for (var i = 0; i < 5; i++) ...[
+                        Container(
+                          width: i < completedRounds ? 10 : 8,
+                          height: i < completedRounds ? 10 : 8,
+                          decoration: BoxDecoration(
+                            color: i < completedRounds
+                                ? const Color(0xFF22C55E)
+                                : const Color(0x33FFFFFF),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        if (i < 4) const SizedBox(width: 4),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Round ${widget.round} of 10',
+                    style: const TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 8.5,
+                      color: Colors.white54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _infoLine(String icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 9)),
+          const SizedBox(width: 3),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 8.5,
+                color: Colors.white60,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // 11. Chat Bar — bottom full-width like mockup
+  // -------------------------------------------------------------------------
+
+  Widget _buildChatBar() {
+    return GestureDetector(
+      onTap: widget.onChat,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xCC09031E),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0x22FFFFFF), width: 1),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF22C55E), size: 18),
+            const SizedBox(width: 8),
+            const Text(
+              'CHAT',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF22C55E),
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Type a message...',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 11,
+                  color: Colors.white.withValues(alpha: 0.3),
+                ),
+              ),
+            ),
+            const Icon(Icons.sentiment_satisfied_alt_rounded, color: Colors.white30, size: 18),
+          ],
+        ),
+      ),
     );
   }
 
