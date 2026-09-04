@@ -129,21 +129,22 @@ class CollectionCatalog {
   ];
 
   static const avatars = [
-    CollectionItem(id: 'av_joker',    name: 'Mystic Jester',    asset: 'av_joker',    rarity: ZcRarity.epic,      price: 0,     owned: true, equipped: true),
-    CollectionItem(id: 'av_cyber',    name: 'Cyber Zero',        asset: 'av_cyber',    rarity: ZcRarity.epic,      price: 900,   owned: true),
-    CollectionItem(id: 'av_fox',      name: 'Neon Kid',         asset: 'av_fox',      rarity: ZcRarity.rare,      price: 900),
-    CollectionItem(id: 'av_robot',    name: 'Shadow Bot',       asset: 'av_robot',    rarity: ZcRarity.epic,      price: 1900),
-    CollectionItem(id: 'av_queen',    name: 'Aurora Queen',     asset: 'av_queen',    rarity: ZcRarity.epic,      price: 1900),
-    CollectionItem(id: 'av_panda',    name: 'Chill Panda',      asset: 'av_panda',    rarity: ZcRarity.rare,      price: 2900),
-    CollectionItem(id: 'av_ninja',    name: 'Silent Ace',       asset: 'av_ninja',    rarity: ZcRarity.epic,      price: 2900),
-    CollectionItem(id: 'av_king',     name: 'Retro King',       asset: 'av_king',     rarity: ZcRarity.rare,      price: 4900),
-    CollectionItem(id: 'av_wizard',   name: 'Pixel Wizard',     asset: 'av_wizard',   rarity: ZcRarity.rare,      price: 4900),
-    CollectionItem(id: 'av_tiger',    name: 'Tiger Blaze',      asset: 'av_tiger',    rarity: ZcRarity.epic,      price: 7900),
-    CollectionItem(id: 'av_owl',      name: 'Cosmic Owl',       asset: 'av_owl',      rarity: ZcRarity.epic,      price: 7900),
-    CollectionItem(id: 'av_alien',    name: 'Quantum Ghost',    asset: 'av_alien',    rarity: ZcRarity.epic,      price: 7900),
-    CollectionItem(id: 'av_knight',   name: 'Samurai Zero',     asset: 'av_knight',   rarity: ZcRarity.legendary, price: 9900),
-    CollectionItem(id: 'av_phoenix',  name: 'Phoenix Rise',     asset: 'av_phoenix',  rarity: ZcRarity.legendary, price: 14900),
-    CollectionItem(id: 'av_dragon',   name: 'Ice Dragon',       asset: 'av_dragon',   rarity: ZcRarity.legendary, price: 19900),
+    // Prices in cents: 900=9🪙 | 1900=19🪙 | 2900=29🪙 | 4900=49🪙 | 7900=79🪙
+    CollectionItem(id: 'av_joker',   name: 'Mystic Jester', asset: 'av_joker',   rarity: ZcRarity.epic,      price: 0,     owned: true, equipped: true),
+    CollectionItem(id: 'av_cyber',   name: 'Cyber Zero',    asset: 'av_cyber',   rarity: ZcRarity.epic,      price: 900,   owned: true),
+    CollectionItem(id: 'av_fox',     name: 'Neon Kid',      asset: 'av_fox',     rarity: ZcRarity.rare,      price: 900),
+    CollectionItem(id: 'av_robot',   name: 'Shadow Bot',    asset: 'av_robot',   rarity: ZcRarity.rare,      price: 1900),
+    CollectionItem(id: 'av_queen',   name: 'Aurora Queen',  asset: 'av_queen',   rarity: ZcRarity.epic,      price: 1900),
+    CollectionItem(id: 'av_panda',   name: 'Chill Panda',   asset: 'av_panda',   rarity: ZcRarity.rare,      price: 2900),
+    CollectionItem(id: 'av_ninja',   name: 'Silent Ace',    asset: 'av_ninja',   rarity: ZcRarity.rare,      price: 2900),
+    CollectionItem(id: 'av_king',    name: 'Retro King',    asset: 'av_king',    rarity: ZcRarity.epic,      price: 4900),
+    CollectionItem(id: 'av_wizard',  name: 'Pixel Wizard',  asset: 'av_wizard',  rarity: ZcRarity.rare,      price: 4900),
+    CollectionItem(id: 'av_tiger',   name: 'Tiger Blaze',   asset: 'av_tiger',   rarity: ZcRarity.epic,      price: 7900),
+    CollectionItem(id: 'av_owl',     name: 'Cosmic Owl',    asset: 'av_owl',     rarity: ZcRarity.epic,      price: 7900),
+    CollectionItem(id: 'av_alien',   name: 'Quantum Ghost', asset: 'av_alien',   rarity: ZcRarity.legendary, price: 7900),
+    CollectionItem(id: 'av_knight',  name: 'Samurai Zero',  asset: 'av_knight',  rarity: ZcRarity.legendary, price: 9900),
+    CollectionItem(id: 'av_phoenix', name: 'Phoenix Rise',  asset: 'av_phoenix', rarity: ZcRarity.legendary, price: 14900),
+    CollectionItem(id: 'av_dragon',  name: 'Ice Dragon',    asset: 'av_dragon',  rarity: ZcRarity.legendary, price: 19900),
   ];
 
   static const themes = [

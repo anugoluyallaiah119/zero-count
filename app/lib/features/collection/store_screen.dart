@@ -1339,6 +1339,7 @@ const _kAvatarsConfig = GridScreenConfig(
   heroRarity: ZcRarity.epic,
   heroBadge: 'Epic',
   heroAction: 'Customize ›',
+  heroDark: true,   // purple gradient hero banner — matches mockup
   filters: ['All', 'Owned', 'Favorites', 'Rare', 'Epic', 'Legendary'],
   stripTitle: 'More avatars in the Store!',
   stripSubtitle: 'Express yourself with fresh looks.',

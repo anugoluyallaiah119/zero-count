@@ -1,33 +1,54 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// Code-drawn avatars — no image files required.
+/// Avatar renderer — uses PNG assets when available, falls back to code-drawn.
 abstract final class ZcAvatars {
+  // All IDs that have a corresponding PNG file in assets/art/.
+  static const _pngIds = {
+    'av_joker', 'av_cyber', 'av_fox', 'av_robot', 'av_queen',
+    'av_panda', 'av_ninja', 'av_king', 'av_wizard', 'av_tiger',
+    'av_owl', 'av_alien', 'av_knight', 'av_phoenix', 'av_dragon',
+    'av_ace',
+  };
+
   static Widget forId(String id, double size) {
-    return ClipOval(
-      child: CustomPaint(
-        size: Size(size, size),
-        painter: _painterFor(id, size),
-      ),
-    );
+    if (_pngIds.contains(id)) {
+      return ClipOval(
+        child: Image.asset(
+          'assets/art/$id.png',
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _codeDrawn(id, size),
+        ),
+      );
+    }
+    return _codeDrawn(id, size);
   }
 
+  static Widget _codeDrawn(String id, double size) => ClipOval(
+        child: CustomPaint(
+          size: Size(size, size),
+          painter: _painterFor(id, size),
+        ),
+      );
+
   static CustomPainter _painterFor(String id, double s) => switch (id) {
-        'av_cyber' => _CyberAvatar(s),
-        'av_fox' => _FoxAvatar(s),
-        'av_robot' => _RobotAvatar(s),
-        'av_queen' => _QueenAvatar(s),
-        'av_panda' => _PandaAvatar(s),
-        'av_ninja' => _NinjaAvatar(s),
-        'av_king' => _KingAvatar(s),
-        'av_wizard' => _WizardAvatar(s),
-        'av_tiger' => _TigerAvatar(s),
-        'av_owl' => _OwlAvatar(s),
-        'av_alien' => _AlienAvatar(s),
-        'av_knight' => _KnightAvatar(s),
+        'av_cyber'   => _CyberAvatar(s),
+        'av_fox'     => _FoxAvatar(s),
+        'av_robot'   => _RobotAvatar(s),
+        'av_queen'   => _QueenAvatar(s),
+        'av_panda'   => _PandaAvatar(s),
+        'av_ninja'   => _NinjaAvatar(s),
+        'av_king'    => _KingAvatar(s),
+        'av_wizard'  => _WizardAvatar(s),
+        'av_tiger'   => _TigerAvatar(s),
+        'av_owl'     => _OwlAvatar(s),
+        'av_alien'   => _AlienAvatar(s),
+        'av_knight'  => _KnightAvatar(s),
         'av_phoenix' => _PhoenixAvatar(s),
-        'av_dragon' => _DragonAvatar(s),
-        _ => _DefaultAvatar(s), // av_default
+        'av_dragon'  => _DragonAvatar(s),
+        _            => _DefaultAvatar(s),
       };
 }
 

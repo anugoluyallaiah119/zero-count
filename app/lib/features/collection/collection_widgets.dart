@@ -364,11 +364,18 @@ class CollectionGridCard extends ConsumerWidget {
           // Attempt real purchase via the shop API.
           try {
             await ref.read(shopCatalogProvider.notifier).buy(item.id);
-            ref.read(collectionProvider.notifier).markOwned(category, item.id);
+            final notifier = ref.read(collectionProvider.notifier);
+            notifier.markOwned(category, item.id);
+            // Auto-equip after purchase — matches expected UX
+            notifier.equip(category, item.id);
+            try { await ref.read(shopRepositoryProvider).equip(item.id); } catch (_) {}
+            ref.invalidate(profileProvider);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('${item.name} purchased!'),
+                content: Text('${item.name} purchased & equipped!'),
                 backgroundColor: LcColors.purple,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ));
             }
           } catch (e) {
@@ -376,6 +383,7 @@ class CollectionGridCard extends ConsumerWidget {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(e.toString()),
                 backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
               ));
             }
           }
