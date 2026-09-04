@@ -162,8 +162,10 @@ class _Header extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Avatar with level badge.
-        Stack(
+        // Avatar with level badge — taps to the profile screen.
+        GestureDetector(
+          onTap: () => context.push('/profile'),
+          child: Stack(
           clipBehavior: Clip.none,
           children: [
             Container(
@@ -201,6 +203,7 @@ class _Header extends StatelessWidget {
               ),
             ),
           ],
+          ),
         ),
         const SizedBox(width: 10),
         Expanded(

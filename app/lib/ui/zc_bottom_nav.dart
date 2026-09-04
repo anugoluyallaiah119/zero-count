@@ -35,7 +35,7 @@ class ZcBottomNav extends StatelessWidget {
               'Events'),
           _item(context, ZcNavTab.collection, Icons.shopping_bag_rounded,
               'Store'),
-          _item(context, ZcNavTab.profile, Icons.leaderboard_rounded, 'Ranks'),
+          _item(context, ZcNavTab.profile, Icons.person_rounded, 'Profile'),
         ],
       ),
     );
@@ -117,7 +117,7 @@ class ZcBottomNav extends StatelessWidget {
       case ZcNavTab.collection:
         context.go('/collection');
       case ZcNavTab.profile:
-        context.go('/leaderboard');
+        context.go('/profile');
     }
   }
 }
