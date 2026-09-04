@@ -22,6 +22,7 @@ import '../features/collection/store_screen.dart';
 import '../features/player/leaderboard_screen.dart';
 import '../features/player/profile_screen.dart';
 import '../features/events/tournament_screen.dart';
+import '../features/social/friends_screen.dart';
 import '../shared/push/notification_settings_screen.dart';
 
 /// App navigation. Routes:
@@ -129,6 +130,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
           path: '/tournaments',
           builder: (context, state) => const TournamentScreen()),
+      GoRoute(
+          path: '/friends',
+          builder: (context, state) => const FriendsScreen()),
       GoRoute(
           path: '/notification-settings',
           builder: (context, state) => const NotificationSettingsScreen()),

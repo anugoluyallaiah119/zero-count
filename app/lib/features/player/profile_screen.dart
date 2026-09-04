@@ -404,21 +404,21 @@ class _QuickLinks extends StatelessWidget {
             children: [
               Expanded(
                 child: _QuickTile(
-                  icon: Icons.leaderboard_rounded,
-                  label: 'Leaderboard',
-                  subtitle: 'Weekly & All-Time',
-                  color: const Color(0xFFFDE047),
-                  onTap: () => context.push('/leaderboard'),
+                  icon: Icons.people_rounded,
+                  label: 'Friends',
+                  subtitle: 'Invite & challenge',
+                  color: const Color(0xFF38BDF8),
+                  onTap: () => context.push('/friends'),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _QuickTile(
-                  icon: Icons.shopping_bag_rounded,
-                  label: 'Store',
-                  subtitle: 'Cosmetics',
-                  color: ZcColors.neonPurple,
-                  onTap: () => context.go('/collection'),
+                  icon: Icons.leaderboard_rounded,
+                  label: 'Leaderboard',
+                  subtitle: 'Weekly & All-Time',
+                  color: const Color(0xFFFDE047),
+                  onTap: () => context.push('/leaderboard'),
                 ),
               ),
             ],
@@ -428,12 +428,11 @@ class _QuickLinks extends StatelessWidget {
             children: [
               Expanded(
                 child: _QuickTile(
-                  icon: Icons.history_rounded,
-                  label: 'Match History',
-                  subtitle: 'Last 20 games',
-                  color: const Color(0xFF38BDF8),
-                  onTap: () =>
-                      context.push('/leaderboard'),
+                  icon: Icons.shopping_bag_rounded,
+                  label: 'Store',
+                  subtitle: 'Cosmetics',
+                  color: ZcColors.neonPurple,
+                  onTap: () => context.go('/collection'),
                 ),
               ),
               const SizedBox(width: 10),

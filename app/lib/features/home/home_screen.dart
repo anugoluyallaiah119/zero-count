@@ -44,7 +44,7 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   _Header(
                     profile: profile,
-                    onBell: () => _comingSoon(context),
+                    onBell: () => context.push('/friends'),
                     onSettings: () => context.push('/tutorial'),
                   ),
                   const SizedBox(height: 14),
