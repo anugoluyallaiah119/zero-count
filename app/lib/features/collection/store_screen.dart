@@ -533,101 +533,126 @@ class _CategoryChips extends StatelessWidget {
 class _PowerYourGameBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFF7EEFF), Color(0xFFEFE3FE)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE0D3F5), width: 1),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 5,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: LcColors.purple,
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                  child: const Text(
-                    'BEST VALUE',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Power Your\nGame',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: LcColors.textDark,
-                    height: 1.1,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Coins for matches.\nGems for premium rewards.',
-                  style: TextStyle(
-                    color: LcColors.textMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _MiniFeatureChip(
-                        icon: 'assets/art/coin.png',
-                        title: 'Play More',
-                        subtitle: 'Win Bigger',
-                        accent: const Color(0xFFF59E0B),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: _MiniFeatureChip(
-                        icon: 'assets/art/gem.png',
-                        title: 'Unlock More',
-                        subtitle: 'Stand Out',
-                        accent: LcColors.purple,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+    // Stack layout: text content left, card image overlays/bleeds right edge.
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        height: 160,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFF7EEFF), Color(0xFFEFE3FE)],
           ),
-          Expanded(
-            flex: 4,
-            child: Image.asset(
-              'assets/art/store_pack_purple.png',
-              height: 130,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const Icon(
-                Icons.card_giftcard_rounded,
-                size: 100,
-                color: LcColors.purple,
+          border: Border.all(color: const Color(0xFFE0D3F5), width: 1),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Stack(
+          children: [
+            // Card image bleeds off right edge with opacity — matches mockup
+            Positioned(
+              right: -18,
+              top: -8,
+              bottom: -8,
+              child: Opacity(
+                opacity: 0.92,
+                child: Image.asset(
+                  'assets/art/store_pack_purple.png',
+                  width: 170,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
               ),
             ),
-          ),
-        ],
+            // Fade gradient so image blends into the lavender bg on the left
+            Positioned(
+              right: 80,
+              top: 0,
+              bottom: 0,
+              width: 60,
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [Color(0xFFEFE3FE), Colors.transparent],
+                  ),
+                ),
+              ),
+            ),
+            // Text content — constrained to left 60% so it doesn't touch image
+            Positioned(
+              left: 16,
+              top: 14,
+              right: 130,
+              bottom: 14,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: LcColors.purple,
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    child: const Text(
+                      'BEST VALUE',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Power Your\nGame',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: LcColors.textDark,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'Coins for matches.\nGems for premium rewards.',
+                    style: TextStyle(
+                      color: LcColors.textMuted,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _MiniFeatureChip(
+                          icon: 'assets/art/coin.png',
+                          title: 'Play More',
+                          subtitle: 'Win Bigger',
+                          accent: const Color(0xFFF59E0B),
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: _MiniFeatureChip(
+                          icon: 'assets/art/gem.png',
+                          title: 'Unlock More',
+                          subtitle: 'Stand Out',
+                          accent: LcColors.purple,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -654,7 +679,6 @@ class _MiniFeatureChip extends StatelessWidget {
         border: Border.all(color: const Color(0xFFE4DFF2)),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             width: 22,
