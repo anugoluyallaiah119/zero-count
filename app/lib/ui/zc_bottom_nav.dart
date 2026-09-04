@@ -35,7 +35,7 @@ class ZcBottomNav extends StatelessWidget {
               'Events'),
           _item(context, ZcNavTab.collection, Icons.shopping_bag_rounded,
               'Store'),
-          _item(context, ZcNavTab.profile, Icons.person_rounded, 'Profile'),
+          _item(context, ZcNavTab.profile, Icons.leaderboard_rounded, 'Ranks'),
         ],
       ),
     );
@@ -117,8 +117,7 @@ class ZcBottomNav extends StatelessWidget {
       case ZcNavTab.collection:
         context.go('/collection');
       case ZcNavTab.profile:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Profile hub arrives in the next phase')));
+        context.go('/leaderboard');
     }
   }
 }

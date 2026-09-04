@@ -19,6 +19,7 @@ import '../features/social/invite_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/events/events_screen.dart';
 import '../features/collection/store_screen.dart';
+import '../features/player/leaderboard_screen.dart';
 
 /// App navigation. Routes:
 ///   /              splash → restores session, routes login vs home (E3.3)
@@ -116,6 +117,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: '/events',
           builder: (context, state) => EventsScreen(
               initialTab: state.extra as int? ?? 0)),
+      GoRoute(
+          path: '/leaderboard',
+          builder: (context, state) => const LeaderboardScreen()),
       GoRoute(
           path: '/collection',
           builder: (context, state) => StoreScreen(
