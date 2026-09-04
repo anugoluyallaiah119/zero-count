@@ -42,17 +42,23 @@ class LiveCard {
 
 /// A seat in the public view: only the card COUNT is visible (hidden info).
 class LiveSeat {
-  const LiveSeat(
-      {required this.id, required this.cards, required this.matchScore});
+  const LiveSeat({
+    required this.id,
+    required this.cards,
+    required this.matchScore,
+    this.equippedAvatar = 'av_default',
+  });
 
-  final String id; // user UUID string
+  final String id;
   final int cards;
   final int matchScore;
+  final String equippedAvatar;
 
   factory LiveSeat.fromJson(Map<String, dynamic> j) => LiveSeat(
         id: j['id'] as String,
         cards: (j['cards'] as num).toInt(),
         matchScore: (j['matchScore'] as num).toInt(),
+        equippedAvatar: j['equippedAvatar'] as String? ?? 'av_default',
       );
 }
 

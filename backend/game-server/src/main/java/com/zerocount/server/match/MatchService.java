@@ -309,10 +309,20 @@ public class MatchService {
         v.put("over", s.isOver());
         List<Map<String, Object>> players = new ArrayList<>();
         for (var p : s.players()) {
-            players.add(Map.of(
-                "id", p.playerId(),
-                "cards", p.hand().size(),
-                "matchScore", p.matchScore()));
+            var pm = new java.util.LinkedHashMap<String, Object>();
+            pm.put("id", p.playerId());
+            pm.put("cards", p.hand().size());
+            pm.put("matchScore", p.matchScore());
+            // Include equipped avatar so the play area can render the real avatar.
+            if (db != null) {
+                try {
+                    String av = db.queryForObject(
+                        "SELECT equipped_avatar FROM users WHERE id = ?",
+                        String.class, UUID.fromString(p.playerId()));
+                    if (av != null) pm.put("equippedAvatar", av);
+                } catch (RuntimeException ignored) {}
+            }
+            players.add(pm);
         }
         v.put("players", players);
         return v;

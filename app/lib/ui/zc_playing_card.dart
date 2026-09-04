@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'zc_card_backs.dart';
+import 'zc_cosmetics.dart';
 
 /// Available card suits.
 enum ZcSuit {
@@ -61,6 +62,7 @@ class ZcPlayingCard extends StatelessWidget {
     required this.suit,
     required this.value,
     this.isSpecial = false,
+    this.specialSkinId = 'sp_classic',
     this.width = 52,
     this.selected = false,
     this.faceDown = false,
@@ -73,6 +75,8 @@ class ZcPlayingCard extends StatelessWidget {
   final ZcSuit suit;
   final int value;
   final bool isSpecial;
+  /// Equipped special card skin id — drives gradient, star colour, label.
+  final String specialSkinId;
   final double width;
   final bool selected;
   final bool faceDown;
@@ -85,12 +89,15 @@ class ZcPlayingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final height = width * 1.44;
     final radius = width * 0.16;
+    final skin = isSpecial ? ZcSpecialSkin.forId(specialSkinId) : null;
 
-    final specialGradient = const LinearGradient(
+    final specialGradient = skin?.gradient ?? const LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [Color(0xFF2A0A4B), Color(0xFF13033B)],
     );
+    final starColor = skin?.starColor ?? const Color(0xFF2EEA6A);
+    final specialLabel = skin?.label ?? '★';
     final normalGradient = const LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -107,7 +114,7 @@ class ZcPlayingCard extends StatelessWidget {
               gradient: isSpecial ? specialGradient : normalGradient,
               borderRadius: BorderRadius.circular(radius),
               border: Border.all(
-                color: selected ? const Color(0xFFFDE047) : (isSpecial ? const Color(0xFFD946CB) : const Color(0xFFD6CEE5)),
+                color: selected ? const Color(0xFFFDE047) : (isSpecial ? skin?.glowColor ?? const Color(0xFFD946CB) : const Color(0xFFD6CEE5)),
                 width: selected ? 2.4 : 1.6,
               ),
               boxShadow: [
@@ -138,11 +145,11 @@ class ZcPlayingCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      isSpecial ? '★' : rank,
+                      isSpecial ? specialLabel : rank,
                       style: TextStyle(
                         fontSize: width * 0.30,
                         fontWeight: FontWeight.w900,
-                        color: isSpecial ? const Color(0xFF2EEA6A) : suit.color,
+                        color: isSpecial ? starColor : suit.color,
                         height: 1.0,
                         fontFamily: 'Nunito',
                       ),
@@ -156,15 +163,15 @@ class ZcPlayingCard extends StatelessWidget {
                 Center(
                   child: isSpecial
                       ? Text(
-                          '★',
+                          specialLabel,
                           style: TextStyle(
                             fontSize: width * 0.56,
                             fontWeight: FontWeight.w900,
-                            color: const Color(0xFF2EEA6A),
+                            color: starColor,
                             height: 1.0,
-                            shadows: const [
+                            shadows: [
                               Shadow(
-                                color: Color(0xFF2EEA6A),
+                                color: starColor,
                                 blurRadius: 12,
                               ),
                             ],

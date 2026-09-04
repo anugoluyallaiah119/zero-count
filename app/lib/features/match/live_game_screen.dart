@@ -3,6 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../ui/zc_cosmetics.dart';
 import 'package:go_router/go_router.dart';
 
 import '../auth/auth_controller.dart';
@@ -42,6 +44,9 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
 
   /// Active card flight overlay (draw/take reveal or discard fly).
   _CardFlight? _flight;
+  /// Short-lived effect overlay fired on draw events.
+  Widget? _effectOverlay;
+  bool _stickerPanelOpen = false;
 
   @override
   void initState() {
@@ -136,7 +141,24 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
       final sfx = ref.read(sfxServiceProvider);
       for (final e in newEvents) {
         if (e.contains('SHOW')) sfx.show();
-        if (e.contains('drew') || e.contains('took')) sfx.draw();
+        if (e.contains('drew') || e.contains('took')) {
+          sfx.draw();
+          // Fire the equipped effect overlay on my own draw events.
+          final myIdx = userId == null ? -1 : next.mySeatIndex(userId);
+          if (next.currentPlayerIdx == myIdx && _effectOverlay == null) {
+            final effectId = next.myEffectId;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _effectOverlay == null) {
+                setState(() {
+                  _effectOverlay = buildEffectOverlay(
+                    effectId: effectId,
+                    onDone: () { if (mounted) setState(() => _effectOverlay = null); },
+                  );
+                });
+              }
+            });
+          }
+        }
         if (e.contains('discarded')) sfx.discard();
         if (e.contains('Match over')) sfx.win();
       }
@@ -184,7 +206,8 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
                   score: match.seats[i].matchScore,
                   cards: match.seats[i].cards,
                   order: i + 1,
-                  avatarAsset: kAvatarFor(match.seats[i].id),
+                  // Use equipped avatar id; the play area will render it via ZcAvatars.
+                  avatarAsset: match.seats[i].equippedAvatar,
                   isActive: match.currentPlayerIdx == i && !match.over,
                   isYou: i == myIdx,
                 ),
@@ -230,7 +253,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
             onSort: () => setState(() => _sorted = !_sorted),
             onToggleGrouping: () => setState(() => _grouping = !_grouping),
             onSettings: () => _showRules(context),
-            onChat: () => _soon('Stickers & chat'),
+            onChat: () => setState(() => _stickerPanelOpen = true),
             onEmoji: () => _soon('Reactions'),
             onHint: () => _soon('Hint'),
             onGroup: () => setState(() => _grouping = !_grouping),
@@ -259,6 +282,22 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
               ),
             ),
           if (_flight != null) IgnorePointer(child: _flight!),
+          if (_effectOverlay != null) IgnorePointer(child: _effectOverlay!),
+          if (_stickerPanelOpen)
+            Positioned(
+              left: 8,
+              right: 8,
+              bottom: 80,
+              child: _StickerPanel(
+                stickerSetId: match.myStickerSetId,
+                onClose: () => setState(() => _stickerPanelOpen = false),
+                onSend: (sticker) {
+                  setState(() => _stickerPanelOpen = false);
+                  // Broadcast emote over STOMP.
+                  _controller.sendEmote(sticker);
+                },
+              ),
+            ),
           if (match.over && match.matchResult != null)
             _LiveMatchOverOverlay(
               result: match.matchResult!,
@@ -941,6 +980,96 @@ class _StreakBonusBadge extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Sticker quick-send panel. Shows the player's 5 free stickers + any owned.
+class _StickerPanel extends StatelessWidget {
+  const _StickerPanel({
+    required this.stickerSetId,
+    required this.onClose,
+    required this.onSend,
+  });
+
+  final String stickerSetId;
+  final VoidCallback onClose;
+  final ValueChanged<String> onSend;
+
+  // All sticker ids mapped to emoji labels for code-drawn display.
+  static const _stickers = {
+    'st_gg': '🏆',
+    'st_nice': '👏',
+    'st_wow': '😮',
+    'st_fire': '🔥',
+    'st_lol': '😂',
+    'st_cry': '😭',
+    'st_zero': '💥',
+    'st_think': '🤔',
+    'st_love': '😌',
+    'st_angry': '😤',
+    'st_crown': '👑',
+    'st_luck': '💯',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+        decoration: BoxDecoration(
+          color: const Color(0xF20A0420),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0x33A855F7), width: 1.2),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                const Text('Stickers',
+                    style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700)),
+                const Spacer(),
+                GestureDetector(
+                  onTap: onClose,
+                  child: const Icon(Icons.close_rounded,
+                      color: Colors.white54, size: 18),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final entry in _stickers.entries)
+                  GestureDetector(
+                    onTap: () => onSend(entry.key),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: const Color(0x22FFFFFF),
+                        borderRadius: BorderRadius.circular(10),
+                        border: entry.key == stickerSetId
+                            ? Border.all(
+                                color: const Color(0xFFA855F7), width: 1.5)
+                            : null,
+                      ),
+                      child: Text(entry.value,
+                          style: const TextStyle(fontSize: 22)),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

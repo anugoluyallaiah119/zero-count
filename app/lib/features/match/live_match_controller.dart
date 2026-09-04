@@ -223,6 +223,12 @@ class LiveMatchController extends Notifier<LiveMatchState?> {
     if (code != null) _send('/app/room/$code/rematch', const {});
   }
 
+  /// Send a sticker/emote to the room. Kind is the emote key (e.g. 'gg').
+  void sendEmote(String kind) {
+    final code = _code;
+    if (code != null) _send('/app/room/$code/emote', {'kind': kind});
+  }
+
   /// "Choose your Zero" — pin the local player's Special to a specific rank.
   void pinSpecial(String rankLabel) {
     final code = _code;

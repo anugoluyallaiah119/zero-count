@@ -3,8 +3,23 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../../ui/zc_cosmetics.dart';
 import '../../ui/zc_playing_card.dart';
 import 'play_area_theme.dart';
+
+/// Renders an avatar from either a ZcAvatars id (av_*) or a legacy asset path.
+Widget _avatarWidget(String? assetOrId, double size) {
+  if (assetOrId != null && assetOrId.startsWith('av_')) {
+    return ZcAvatars.forId(assetOrId, size);
+  }
+  return Image.asset(
+    assetOrId ?? 'assets/art/avatar_01.png',
+    width: size,
+    height: size,
+    fit: BoxFit.cover,
+    errorBuilder: (_, __, ___) => ZcAvatars.forId('av_default', size),
+  );
+}
 
 /// A player/opponent shown around the table.
 @immutable
@@ -1525,24 +1540,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                   ),
                 ],
               ),
-              child: ClipOval(
-                child: Image.asset(
-                  asset,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: const Color(0xFF3B0764),
-                    child: Center(
-                      child: Text(
-                        displayName.isNotEmpty ? displayName[0] : '?',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+              child: ClipOval(child: _avatarWidget(asset, 52)),
               ),
             ),
             Positioned(
@@ -1662,22 +1660,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                 ),
               ],
             ),
-            child: ClipOval(
-              child: Image.asset(
-                avatarAsset,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: const Color(0xFFEAB308),
-                  child: const Center(
-                    child: Icon(
-                      Icons.person_rounded,
-                      color: Color(0xFF1E1B4B),
-                      size: 28,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            child: ClipOval(child: _avatarWidget(avatarAsset, 46)),
           ),
           const SizedBox(height: 3),
 
