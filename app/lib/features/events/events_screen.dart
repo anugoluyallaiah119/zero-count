@@ -9,6 +9,7 @@ import '../auth/avatar_catalog.dart';
 import '../player/profile_repository.dart';
 import 'challenge_repository.dart';
 import 'contest_repository.dart';
+import 'sponsor_repository.dart';
 
 /// Events hub — Daily / Weekly / Monthly / Sponsored tabs (Phase 2 mockups).
 class EventsScreen extends ConsumerStatefulWidget {
@@ -1286,18 +1287,22 @@ class _SponsoredTab extends ConsumerWidget {
           chipValue: chipValue,
           art: 'assets/art/hero_sponsored.png',
         ),
-        // Live sponsored contests from backend; fall back to static cards.
+        // Live sponsored contests: prefer real sponsors from /api/contests/sponsors.
         if (liveSponsored != null && liveSponsored.isNotEmpty)
-          ...liveSponsored.map((c) => _sponsoredBrandCard(
-                brandLogo: 'assets/art/brand_swiggy.png', // generic fallback icon
-                brandName: c.sponsor ?? 'Sponsor',
-                title: c.title.toUpperCase(),
-                desc: 'Play & win with ${c.sponsor}!',
-                action: 'JOIN NOW',
-                color: const Color(0xFF7B2FE0),
-                voucher: 'Prize',
-                onTap: () => context.push('/tournaments'),
-              ))
+          ...liveSponsored.map((c) {
+            final sponsorName = c.sponsor ?? 'Sponsor';
+            return _sponsoredBrandCard(
+              brandLogo: 'assets/art/brand_swiggy.png',
+              brandName: sponsorName,
+              title: c.title.toUpperCase(),
+              desc: 'Play & win with $sponsorName! '
+                  'Time left: ${c.timeLeft.inHours}h ${c.timeLeft.inMinutes % 60}m',
+              action: 'JOIN NOW',
+              color: const Color(0xFF7B2FE0),
+              voucher: 'Prize',
+              onTap: () => context.push('/tournaments'),
+            );
+          })
         else ...[
           _sponsoredBrandCard(
             brandLogo: 'assets/art/brand_swiggy.png',

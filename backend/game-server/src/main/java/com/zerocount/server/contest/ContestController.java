@@ -17,6 +17,7 @@ import com.zerocount.server.player.AuthInterceptor;
  *   GET  /api/contests                      → live contests
  *   POST /api/contests/{id}/enter           → join (idempotent)
  *   GET  /api/contests/{id}/standings       → top 50 + my rank
+ *   GET  /api/sponsors                      → public sponsor list (no auth)
  */
 @RestController
 @RequestMapping("/api/contests")
@@ -53,6 +54,13 @@ public class ContestController {
             "SELECT sp.name FROM contests c JOIN sponsors sp "
                 + "ON sp.id = c.sponsor_id WHERE c.id = ?", String.class, contestId);
         return s.isEmpty() ? null : s.get(0);
+    }
+
+    /** Public — no Bearer token required; sponsors are display-only data. */
+    @GetMapping("/sponsors")
+    public List<Map<String, Object>> publicSponsors() {
+        return db.queryForList(
+            "SELECT id, name, logo_url, site_url FROM sponsors ORDER BY name");
     }
 
     @PostMapping("/{id}/enter")
