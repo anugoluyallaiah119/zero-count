@@ -200,6 +200,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
         children: [
           PlayAreaTable(
             theme: _theme,
+            cardBackId: match.myCardBackId,
             players: [
               for (var i = 0; i < match.seats.length; i++)
                 PlayAreaPlayer(

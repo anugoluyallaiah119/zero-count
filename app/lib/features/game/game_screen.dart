@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../engine/ai.dart';
 import '../../engine/model.dart' as eng;
 import '../../ui/zc_cosmetics.dart';
+import '../collection/collection_data.dart';
 import '../../engine/scoring.dart' as eng;
 import '../../engine/session.dart';
 import '../../shared/sfx/sfx_service.dart';
@@ -127,6 +128,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       children: [
         PlayAreaTable(
           theme: m.playAreaTheme,
+          cardBackId: ref.watch(collectionProvider)['cardBacks']
+              ?.firstWhere((e) => e.equipped, orElse: () => ref.watch(collectionProvider)['cardBacks']!.first)
+              .id,
           players: [
             for (var i = 0; i < m.session.players.length; i++)
               PlayAreaPlayer(

@@ -1,34 +1,74 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// Registry of all card back designs. Each design is a pure-code
-/// CustomPainter — no image files required.
+/// Registry of all card back designs.
+/// PNG assets are used when available; code-drawn painters as fallback.
 abstract final class ZcCardBacks {
-  /// Returns the painter for a card back id (falls back to classic).
-  static CustomPainter forId(String id, double width, double height) {
-    return switch (id) {
-      'cb_midnight' => _MidnightPulsePainter(width, height),
-      'cb_amethyst' => _AmethystVeilPainter(width, height),
-      'cb_ember' => _EmberCorePainter(width, height),
-      'cb_arctic' => _ArcticFrostPainter(width, height),
-      'cb_galaxy' => _CosmicDriftPainter(width, height),
-      'cb_sakura' => _SakuraStormPainter(width, height),
-      'cb_inferno' => _InfernoAcePainter(width, height),
-      'cb_obsidian' => _ObsidianCrownPainter(width, height),
-      _ => _ZeroClassicPainter(width, height), // cb_classic + default
-    };
+  // Map from catalog id → PNG asset filename (without path/extension).
+  static const _pngMap = <String, String>{
+    'cb_classic':   'cb_classic',
+    'cb_midnight':  'cb_midnight',
+    'cb_amethyst':  'cb_cyber',    // best visual match for purple/amethyst
+    'cb_ember':     'cb_ember',
+    'cb_arctic':    'cb_sakura',   // cool tones, different palette
+    'cb_galaxy':    'cb_cyber',
+    'cb_sakura':    'cb_sakura',
+    'cb_inferno':   'cb_gold',
+    'cb_obsidian':  'cb_royal',
+    'cb_ocean':     'cb_ocean',
+    'cb_forest':    'cb_classic',
+    'cb_prism':     'cb_cyber',
+  };
+
+  static Widget widgetFor(String id, double width) {
+    final pngName = _pngMap[id];
+    final h = width * 1.44;
+    final radius = BorderRadius.circular(width * 0.09);
+    if (pngName != null) {
+      return ClipRRect(
+        borderRadius: radius,
+        child: Image.asset(
+          'assets/art/$pngName.png',
+          width: width,
+          height: h,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => ClipRRect(
+            borderRadius: radius,
+            child: CustomPaint(
+              size: Size(width, h),
+              painter: _painterFor(id, width, h),
+            ),
+          ),
+        ),
+      );
+    }
+    return ClipRRect(
+      borderRadius: radius,
+      child: CustomPaint(
+        size: Size(width, h),
+        painter: _painterFor(id, width, h),
+      ),
+    );
   }
 
+  static CustomPainter _painterFor(String id, double width, double height) =>
+      switch (id) {
+        'cb_midnight' => _MidnightPulsePainter(width, height),
+        'cb_amethyst' => _AmethystVeilPainter(width, height),
+        'cb_ember'    => _EmberCorePainter(width, height),
+        'cb_arctic'   => _ArcticFrostPainter(width, height),
+        'cb_galaxy'   => _CosmicDriftPainter(width, height),
+        'cb_sakura'   => _SakuraStormPainter(width, height),
+        'cb_inferno'  => _InfernoAcePainter(width, height),
+        'cb_obsidian' => _ObsidianCrownPainter(width, height),
+        _             => _ZeroClassicPainter(width, height),
+      };
+
   static const rarity = <String, String>{
-    'cb_classic': 'rare',
-    'cb_midnight': 'rare',
-    'cb_amethyst': 'rare',
-    'cb_ember': 'epic',
-    'cb_arctic': 'epic',
-    'cb_galaxy': 'epic',
-    'cb_sakura': 'epic',
-    'cb_inferno': 'legendary',
-    'cb_obsidian': 'legendary',
+    'cb_classic': 'rare',   'cb_midnight': 'rare',  'cb_amethyst': 'epic',
+    'cb_ember':   'epic',   'cb_arctic':   'rare',  'cb_galaxy':   'epic',
+    'cb_sakura':  'epic',   'cb_inferno':  'legendary', 'cb_obsidian': 'legendary',
+    'cb_ocean':   'epic',   'cb_forest':   'rare',  'cb_prism':    'legendary',
   };
 }
 
@@ -47,16 +87,7 @@ class ZcCardBackWidget extends StatelessWidget {
   final double width;
 
   @override
-  Widget build(BuildContext context) {
-    final h = width * 1.44;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(width * 0.09),
-      child: CustomPaint(
-        size: Size(width, h),
-        painter: ZcCardBacks.forId(backId, width, h),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ZcCardBacks.widgetFor(backId, width);
 }
 
 // ============================================================================

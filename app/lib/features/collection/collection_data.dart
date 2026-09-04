@@ -61,71 +61,19 @@ class CollectionCatalog {
   /// Card back catalog — ids match ZcCardBacks.forId() and the shop_items DB.
   /// 'asset' field is repurposed as the card-back id prefix for rendering.
   static const cardBacks = [
-    CollectionItem(
-        id: 'cb_classic',
-        name: 'Zero Classic',
-        asset: 'cb_classic',
-        rarity: ZcRarity.rare,
-        subtitle: 'Deep navy with a gold zero emblem. The original.',
-        price: 0,
-        owned: true,
-        equipped: true),
-    CollectionItem(
-        id: 'cb_midnight',
-        name: 'Midnight Pulse',
-        asset: 'cb_midnight',
-        rarity: ZcRarity.rare,
-        subtitle: 'Pure black with a neon-blue pulse grid.',
-        price: 900),
-    CollectionItem(
-        id: 'cb_amethyst',
-        name: 'Amethyst Veil',
-        asset: 'cb_amethyst',
-        rarity: ZcRarity.rare,
-        subtitle: 'Purple crystalline facets with a gem shimmer.',
-        price: 1900),
-    CollectionItem(
-        id: 'cb_ember',
-        name: 'Ember Core',
-        asset: 'cb_ember',
-        rarity: ZcRarity.epic,
-        subtitle: 'Charcoal base with red-orange flame geometry.',
-        price: 2900),
-    CollectionItem(
-        id: 'cb_arctic',
-        name: 'Arctic Frost',
-        asset: 'cb_arctic',
-        rarity: ZcRarity.epic,
-        subtitle: 'Ice-blue snowflake geometry on deep teal.',
-        price: 2900),
-    CollectionItem(
-        id: 'cb_galaxy',
-        name: 'Cosmic Drift',
-        asset: 'cb_galaxy',
-        rarity: ZcRarity.epic,
-        subtitle: 'Star-field space gradient with a nebula swirl.',
-        price: 4900),
-    CollectionItem(
-        id: 'cb_sakura',
-        name: 'Sakura Storm',
-        asset: 'cb_sakura',
-        rarity: ZcRarity.epic,
-        subtitle: 'Dark forest green with falling sakura petals.',
-        price: 4900),
-    CollectionItem(
-        id: 'cb_inferno',
-        name: 'Inferno Ace',
-        asset: 'cb_inferno',
-        rarity: ZcRarity.legendary,
-        subtitle: 'Gold lattice with a blazing fire corona.',
-        price: 7900),
-    CollectionItem(
-        id: 'cb_obsidian',
-        name: 'Obsidian Crown',
-        asset: 'cb_obsidian',
-        rarity: ZcRarity.legendary,
-        subtitle: 'Matte black, gold micro-dots, jewelled crown.',
-        price: 9900),
+    // Prices in cents: 900=9🪙 | 1900=19🪙 | 2900=29🪙 | 4900=49🪙 | 5900=59🪙 | 7900=79🪙 | 9900=99🪙 | 12900=129🪙
+    CollectionItem(id: 'cb_classic',  name: 'Zero Classic',     asset: 'cb_classic',  rarity: ZcRarity.rare,      subtitle: 'The original. Deep navy with a gold zero.', price: 0,     owned: true, equipped: true),
+    CollectionItem(id: 'cb_midnight', name: 'Midnight Pulse',   asset: 'cb_midnight', rarity: ZcRarity.rare,      subtitle: 'Pure black with a neon-blue pulse grid.', price: 900),
+    CollectionItem(id: 'cb_amethyst', name: 'Amethyst Veil',    asset: 'cb_amethyst', rarity: ZcRarity.epic,      subtitle: 'Purple crystalline facets with a gem shimmer.', price: 1900),
+    CollectionItem(id: 'cb_ember',    name: 'Ember Core',       asset: 'cb_ember',    rarity: ZcRarity.epic,      subtitle: 'Charcoal base with red-orange flame geometry.', price: 2900),
+    CollectionItem(id: 'cb_arctic',   name: 'Arctic Frost',     asset: 'cb_arctic',   rarity: ZcRarity.rare,      subtitle: 'Ice-blue snowflake geometry on deep teal.', price: 2900),
+    CollectionItem(id: 'cb_galaxy',   name: 'Cosmic Drift',     asset: 'cb_galaxy',   rarity: ZcRarity.epic,      subtitle: 'Star-field space gradient with a nebula swirl.', price: 4900),
+    CollectionItem(id: 'cb_sakura',   name: 'Sakura Storm',     asset: 'cb_sakura',   rarity: ZcRarity.epic,      subtitle: 'Dark forest with falling sakura petals.', price: 4900),
+    CollectionItem(id: 'cb_inferno',  name: 'Inferno Ace',      asset: 'cb_inferno',  rarity: ZcRarity.legendary, subtitle: 'Gold lattice with a blazing fire corona.', price: 7900),
+    CollectionItem(id: 'cb_obsidian', name: 'Obsidian Crown',   asset: 'cb_obsidian', rarity: ZcRarity.legendary, subtitle: 'Matte black, gold micro-dots, jewelled crown.', price: 9900),
+    CollectionItem(id: 'cb_ocean',    name: 'Ocean Wave',       asset: 'cb_ocean',    rarity: ZcRarity.epic,      subtitle: 'Teal waves crashing through deep blue.', price: 9900),
+    CollectionItem(id: 'cb_forest',   name: 'Forest Realm',     asset: 'cb_forest',   rarity: ZcRarity.rare,      subtitle: 'Lush emerald foliage and ancient wood.', price: 5900),
+    CollectionItem(id: 'cb_prism',    name: 'Celestial Prism',  asset: 'cb_prism',    rarity: ZcRarity.legendary, subtitle: 'Shimmering crystal prism, shifting light.', price: 12900),
   ];
 
   static const avatars = [

@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../../ui/zc_card_backs.dart';
 import '../../ui/zc_cosmetics.dart';
 import '../../ui/zc_playing_card.dart';
 import 'play_area_theme.dart';
@@ -95,6 +96,7 @@ class PlayAreaTable extends StatefulWidget {
     this.gems,
     this.sorted = false,
     this.grouping = true,
+    this.cardBackId,
     this.specialHint,
     this.specialHintUrgent = false,
     this.onBack,
@@ -123,6 +125,7 @@ class PlayAreaTable extends StatefulWidget {
   final bool canDiscard;
   final int? selectedCardId;
   final int round;
+  final String? cardBackId; // equipped cb_* id — overrides theme cardBackAsset
   final int target;
   final String modeLabel;
   final int? coins;
@@ -1256,26 +1259,30 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                     ),
                   ),
                 ),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.asset(
-                    widget.theme.cardBackAsset,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: const Color(0xFF4C1D95),
-                      child: const Center(
-                        child: Text(
-                          '0',
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFFC084FC),
+                // Show equipped card back; fall back to theme asset.
+                widget.cardBackId != null
+                    ? ZcCardBackWidget(
+                        backId: widget.cardBackId!,
+                        width: 58,
+                      )
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.asset(
+                          widget.theme.cardBackAsset,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: const Color(0xFF4C1D95),
+                            child: const Center(
+                              child: Text('0',
+                                  style: TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFFC084FC),
+                                  )),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                ),
                 if (canDraw)
                   Positioned.fill(
                     child: Container(
