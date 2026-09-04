@@ -7,7 +7,6 @@ import '../../ui/zc_theme.dart';
 import '../../ui/zc_bottom_nav.dart';
 import '../player/leaderboard_repository.dart';
 import '../player/profile_repository.dart';
-
 /// Full leaderboard hub: Weekly · All-Time · My History.
 /// Reached via the Profile tab or /leaderboard route.
 class LeaderboardScreen extends ConsumerStatefulWidget {
@@ -154,6 +153,27 @@ class _Header extends ConsumerWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Notification settings bell
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => context.push('/notification-settings'),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0x22FFFFFF),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: const Color(0x33FFFFFF), width: 1.1),
+                ),
+                child: const Icon(Icons.notifications_rounded,
+                    color: Colors.white70, size: 20),
+              ),
             ),
           ),
         ],

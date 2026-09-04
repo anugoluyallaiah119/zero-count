@@ -20,6 +20,7 @@ import '../features/splash/splash_screen.dart';
 import '../features/events/events_screen.dart';
 import '../features/collection/store_screen.dart';
 import '../features/player/leaderboard_screen.dart';
+import '../shared/push/notification_settings_screen.dart';
 
 /// App navigation. Routes:
 ///   /              splash → restores session, routes login vs home (E3.3)
@@ -120,6 +121,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
           path: '/leaderboard',
           builder: (context, state) => const LeaderboardScreen()),
+      GoRoute(
+          path: '/notification-settings',
+          builder: (context, state) => const NotificationSettingsScreen()),
       GoRoute(
           path: '/collection',
           builder: (context, state) => StoreScreen(

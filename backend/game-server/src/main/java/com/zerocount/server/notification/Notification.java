@@ -15,7 +15,9 @@ public record Notification(
         CHALLENGE_NUDGE,       // V2.3 daily challenge reminder (respectful caps)
         STREAK_AT_RISK,        // V2.3
         CONTEST_STARTING,      // V2.5
-        REWARD_GRANTED         // V2.4
+        REWARD_GRANTED,        // V2.4
+        REMATCH_NUDGE,         // nudge the non-voting player 30s after match ends
+        MATCH_RESULT           // post-match summary when user is not in the app
     }
 
     public Notification {
