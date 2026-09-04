@@ -1,32 +1,17 @@
-import 'dart:io';
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 
 import '../../app/config.dart';
 
-/// Ad unit IDs — use test IDs by default; real IDs are set via env at build.
-/// Replace with your AdMob IDs before release:
-///   --dart-define=ADMOB_REWARDED_ANDROID=ca-app-pub-xxx~xxx
-///   --dart-define=ADMOB_REWARDED_IOS=ca-app-pub-xxx~xxx
-const _testAndroid = 'ca-app-pub-3940256099942544/5224354917';
-const _testIos = 'ca-app-pub-3940256099942544/1712485313';
-
-const _adUnitId = kReleaseMode
-    ? String.fromEnvironment(
-        Platform.isAndroid
-            ? 'ADMOB_REWARDED_ANDROID'
-            : 'ADMOB_REWARDED_IOS',
-        defaultValue: '')
-    : (kIsWeb ? '' : '');
-
-String get _effectiveAdUnit =>
-    _adUnitId.isNotEmpty
-        ? _adUnitId
-        : Platform.isAndroid
-            ? _testAndroid
-            : _testIos;
+/// Unity Ads credentials — from Unity Dashboard → Monetization.
+/// Game ID: 800367330
+/// Placement: Rewarded_Android
+const _kGameIdAndroid = '800367330';
+const _kGameIdIos = '800367330'; // update if you make a separate iOS app
+const _kPlacement = 'Rewarded_Android';
 
 class AdStatus {
   const AdStatus({
@@ -45,32 +30,42 @@ class AdStatus {
 class AdRewardService {
   AdRewardService(this._dio);
   final Dio _dio;
-  RewardedAd? _preloaded;
+
+  bool _sdkReady = false;
+  bool _adReady = false;
 
   Future<void> init() async {
-    if (kIsWeb) return;
-    await MobileAds.instance.initialize();
-    _preload();
-  }
-
-  void _preload() {
-    if (kIsWeb) return;
-    RewardedAd.load(
-      adUnitId: _effectiveAdUnit,
-      request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) => _preloaded = ad,
-        onAdFailedToLoad: (err) {
-          debugPrint('Rewarded ad load failed: $err');
-          _preloaded = null;
-        },
-      ),
+    if (kIsWeb || _sdkReady) return;
+    _sdkReady = true;
+    await UnityAds.init(
+      gameId: defaultTargetPlatform == TargetPlatform.android
+          ? _kGameIdAndroid
+          : _kGameIdIos,
+      testMode: kDebugMode, // shows test ads in debug builds
+      onComplete: () => _loadAd(),
+      onFailed: (err, msg) =>
+          debugPrint('Unity Ads init failed: $err $msg'),
     );
   }
 
-  /// Fetches today's ad status from the server.
+  void _loadAd() {
+    UnityAds.load(
+      placementId: _kPlacement,
+      onComplete: (_) {
+        _adReady = true;
+        debugPrint('Unity Ads: ad ready');
+      },
+      onFailed: (_, err, msg) {
+        _adReady = false;
+        debugPrint('Unity Ads load failed: $err $msg');
+      },
+    );
+  }
+
+  /// Fetches today's ad quota from the server.
   Future<AdStatus> status() async {
-    final res = await _dio.get<Map<String, dynamic>>('/api/wallet/ad-status');
+    final res =
+        await _dio.get<Map<String, dynamic>>('/api/wallet/ad-status');
     final d = res.data!;
     return AdStatus(
       adsWatchedToday: (d['adsWatchedToday'] as num).toInt(),
@@ -79,53 +74,48 @@ class AdRewardService {
     );
   }
 
-  /// Shows a rewarded ad. On completion, claims coins from the server.
-  /// Returns the new wallet coin balance, or null if the ad was not shown.
+  /// Shows the Unity rewarded ad. On completion claims 50 coins from server.
+  /// Returns (coins, balance) on success, null if skipped or unavailable.
   Future<({int coins, int balance})?> watchAndEarn() async {
-    if (kIsWeb) {
-      // Web fallback — no ad SDK, simulate for dev purposes.
-      return _claimOnServer();
-    }
-    final ad = _preloaded;
-    if (ad == null) {
-      // No preloaded ad; try to load synchronously (will likely fail).
-      _preload();
+    if (kIsWeb) return _claimOnServer(); // dev fallback
+    if (!_adReady) {
+      debugPrint('Unity Ads: no ad loaded yet');
+      _loadAd();
       return null;
     }
-    _preloaded = null; // consume
-    final result = await _showAd(ad);
-    _preload(); // start preloading the next one
-    if (!result) return null;
-    return _claimOnServer();
-  }
 
-  /// Returns true if the user earned the reward.
-  Future<bool> _showAd(RewardedAd ad) async {
-    final completer = Future<bool>.value(false);
-    bool earned = false;
-    ad.fullScreenContentCallback = FullScreenContentCallback(
-      onAdDismissedFullScreenContent: (a) => a.dispose(),
-      onAdFailedToShowFullScreenContent: (a, _) => a.dispose(),
+    final c = _Once<bool>();
+    UnityAds.showVideoAd(
+      placementId: _kPlacement,
+      onStart: (_) {},
+      onClick: (_) {},
+      onSkipped: (_) {
+        c.complete(false);
+        _adReady = false;
+        _loadAd();
+      },
+      onComplete: (_) {
+        c.complete(true);
+        _adReady = false;
+        _loadAd();
+      },
+      onFailed: (_, err, msg) {
+        debugPrint('Unity Ads show failed: $err $msg');
+        c.complete(false);
+        _adReady = false;
+        _loadAd();
+      },
     );
-    late final Future<bool> done;
-    final notifier = ValueNotifier<bool?>(null);
-    ad.show(onUserEarnedReward: (_, __) {
-      earned = true;
-      notifier.value = true;
-    });
-    // Wait for dismiss (earned or skipped).
-    await Future.delayed(const Duration(seconds: 1));
-    for (var i = 0; i < 60 && notifier.value == null; i++) {
-      await Future.delayed(const Duration(seconds: 1));
-    }
-    return earned;
+
+    final earned = await c.future;
+    if (!earned) return null;
+    return _claimOnServer();
   }
 
   Future<({int coins, int balance})?> _claimOnServer() async {
     final nonce =
-        DateTime.now().millisecondsSinceEpoch.toRadixString(16) +
-            '-' +
-            identityHashCode(this).toRadixString(16);
+        '${DateTime.now().millisecondsSinceEpoch.toRadixString(16)}'
+        '-${identityHashCode(this).toRadixString(16)}';
     try {
       final res = await _dio.post<Map<String, dynamic>>(
         '/api/wallet/ad-reward',
@@ -135,24 +125,27 @@ class AdRewardService {
       if (d['granted'] == true) {
         return (
           coins: (d['coins'] as num).toInt(),
-          balance: (d['balance'] as num).toInt()
+          balance: (d['balance'] as num).toInt(),
         );
       }
     } catch (e) {
-      debugPrint('Ad claim failed: $e');
+      debugPrint('Ad claim error: $e');
     }
     return null;
   }
-
-  void dispose() => _preloaded?.dispose();
 }
 
-final adRewardServiceProvider = Provider<AdRewardService>((ref) {
-  final svc = AdRewardService(ref.watch(dioProvider));
-  ref.onDispose(svc.dispose);
-  return svc;
-});
+/// Single-use completer — ignores duplicate calls.
+class _Once<T> {
+  final _c = Completer<T>();
+  Future<T> get future => _c.future;
+  void complete(T v) { if (!_c.isCompleted) _c.complete(v); }
+}
 
-final adStatusProvider = FutureProvider<AdStatus>((ref) {
-  return ref.watch(adRewardServiceProvider).status();
-});
+final adRewardServiceProvider = Provider<AdRewardService>(
+  (ref) => AdRewardService(ref.watch(dioProvider)),
+);
+
+final adStatusProvider = FutureProvider<AdStatus>(
+  (ref) => ref.watch(adRewardServiceProvider).status(),
+);
