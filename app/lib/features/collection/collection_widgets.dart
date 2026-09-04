@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../ui/zc_card_backs.dart';
 import '../../ui/zc_theme.dart';
 import '../auth/avatar_catalog.dart';
 import '../player/profile_repository.dart';
 import 'collection_data.dart';
+import 'shop_repository.dart';
 
 /// Light-theme tokens from the Collection mockups.
 class LcColors {
@@ -352,8 +354,40 @@ class CollectionGridCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.read(collectionProvider.notifier);
+    // Card backs use code-drawn painters; all others fall back to image asset.
+    final isCardBack = category == 'cardBacks';
     return GestureDetector(
-      onTap: () => ctrl.equip(category, item.id),
+      onTap: () async {
+        if (!item.owned) {
+          // Attempt real purchase via the shop API.
+          try {
+            await ref.read(shopCatalogProvider.notifier).buy(item.id);
+            ref.read(collectionProvider.notifier).markOwned(category, item.id);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('${item.name} purchased!'),
+                backgroundColor: LcColors.purple,
+              ));
+            }
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(e.toString()),
+                backgroundColor: Colors.red,
+              ));
+            }
+          }
+        } else {
+          ctrl.equip(category, item.id);
+          if (isCardBack) {
+            // Persist equip to server.
+            try {
+              await ref.read(shopRepositoryProvider).equip(item.id);
+            } catch (_) {}
+            ref.invalidate(profileProvider);
+          }
+        }
+      },
       child: Container(
         decoration: BoxDecoration(
           color: LcColors.card,
@@ -372,34 +406,41 @@ class CollectionGridCard extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(9),
                   child: AspectRatio(
                     aspectRatio: artAspect,
-                    child: Image.asset(
-                      item.asset,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: const Color(0xFF2E1065),
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.style_rounded,
-                                  color: Color(0xFFFDE047), size: 22),
-                              const SizedBox(height: 2),
-                              Text(
-                                item.name,
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.bold,
+                    child: isCardBack
+                        ? LayoutBuilder(
+                            builder: (context, box) => ZcCardBackWidget(
+                              backId: item.asset,
+                              width: box.maxWidth,
+                            ),
+                          )
+                        : Image.asset(
+                            item.asset,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: const Color(0xFF2E1065),
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.style_rounded,
+                                        color: Color(0xFFFDE047), size: 22),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      item.name,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                    ),
+                                  ],
                                 ),
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
                               ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
                   ),
                 ),
                 Positioned(
@@ -462,7 +503,26 @@ class CollectionGridCard extends ConsumerWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
             const SizedBox(height: 4),
-            RarityChip(rarity: item.rarity),
+            if (!item.owned && item.price != null)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  item.price == 0
+                      ? 'FREE'
+                      : '${(item.price! / 100).round()} coins',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900),
+                ),
+              )
+            else
+              RarityChip(rarity: item.rarity),
           ],
         ),
       ),

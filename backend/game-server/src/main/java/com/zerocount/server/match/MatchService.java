@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
@@ -46,6 +48,7 @@ public class MatchService {
 
     private final MatchEventRepository eventLog;
     private final List<MatchHook> hooks;
+    private JdbcTemplate db;
     private com.zerocount.server.analytics.GameplayAnalyticsService gameplayAnalytics;
     private com.zerocount.server.player.AdaptiveDrawService adaptiveDraw;
     private boolean adaptiveEnabled = true;
@@ -54,6 +57,9 @@ public class MatchService {
         this.eventLog = eventLog;
         this.hooks = hooks == null ? List.of() : hooks;
     }
+
+    @Autowired(required = false)
+    public void setDb(JdbcTemplate db) { this.db = db; }
 
     /** V2.2 Phase 2 telemetry — nullable so existing tests that don't wire it still pass. */
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -335,6 +341,15 @@ public class MatchService {
                         v.put("validPairRanks",
                             pairs.stream().map(com.zerocount.engine.model.Rank::label).toList());
                     }
+                }
+                // Card back equipped by this player.
+                if (db != null) {
+                    try {
+                        String back = db.queryForObject(
+                            "SELECT equipped_card_back FROM users WHERE id = ?",
+                            String.class, UUID.fromString(p.playerId()));
+                        if (back != null) v.put("equippedCardBack", back);
+                    } catch (RuntimeException ignored) {}
                 }
                 return v;
             }

@@ -199,6 +199,8 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
                     suit: _zcSuit(match.topDiscard!.suit),
                     value: match.topDiscard!.value,
                     isSpecial: match.topDiscard!.isSpecial,
+                    // Show the back of a face-down discard using my equipped back.
+                    cardBackId: match.myCardBackId,
                     width: 74,
                   ),
             isMyTurn: isMyTurn,

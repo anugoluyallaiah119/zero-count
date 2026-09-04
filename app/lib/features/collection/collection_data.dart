@@ -58,60 +58,74 @@ class CollectionItem {
 }
 
 class CollectionCatalog {
+  /// Card back catalog — ids match ZcCardBacks.forId() and the shop_items DB.
+  /// 'asset' field is repurposed as the card-back id prefix for rendering.
   static const cardBacks = [
     CollectionItem(
-        id: 'cb_brazil',
-        name: 'Brazil Flag',
-        asset: 'assets/art/card_back_brazil.png',
-        rarity: ZcRarity.legendary,
-        subtitle: 'Gold trim and Brazilian flag emblem.',
+        id: 'cb_classic',
+        name: 'Zero Classic',
+        asset: 'cb_classic',
+        rarity: ZcRarity.rare,
+        subtitle: 'Deep navy with a gold zero emblem. The original.',
+        price: 0,
         owned: true,
         equipped: true),
     CollectionItem(
-        id: 'cb_classic',
-        name: 'Cosmic Swirl',
-        asset: 'assets/art/cb_classic.png',
-        rarity: ZcRarity.epic,
-        owned: true),
-    CollectionItem(
         id: 'cb_midnight',
-        name: 'Midnight',
-        asset: 'assets/art/cb_midnight.png',
+        name: 'Midnight Pulse',
+        asset: 'cb_midnight',
         rarity: ZcRarity.rare,
-        owned: true),
+        subtitle: 'Pure black with a neon-blue pulse grid.',
+        price: 900),
     CollectionItem(
-        id: 'cb_cyber',
-        name: 'Aurora',
-        asset: 'assets/art/cb_cyber.png',
+        id: 'cb_amethyst',
+        name: 'Amethyst Veil',
+        asset: 'cb_amethyst',
         rarity: ZcRarity.rare,
-        owned: true),
+        subtitle: 'Purple crystalline facets with a gem shimmer.',
+        price: 1900),
     CollectionItem(
         id: 'cb_ember',
-        name: 'Neon Grid',
-        asset: 'assets/art/cb_ember.png',
+        name: 'Ember Core',
+        asset: 'cb_ember',
         rarity: ZcRarity.epic,
-        owned: true),
+        subtitle: 'Charcoal base with red-orange flame geometry.',
+        price: 2900),
     CollectionItem(
-        id: 'cb_ocean',
-        name: 'Ocean Depths',
-        asset: 'assets/art/cb_ocean.png',
-        rarity: ZcRarity.rare,
-        owned: true),
+        id: 'cb_arctic',
+        name: 'Arctic Frost',
+        asset: 'cb_arctic',
+        rarity: ZcRarity.epic,
+        subtitle: 'Ice-blue snowflake geometry on deep teal.',
+        price: 2900),
     CollectionItem(
-        id: 'cb_royal',
-        name: 'Fire Realm',
-        asset: 'assets/art/cb_royal.png',
-        rarity: ZcRarity.epic),
+        id: 'cb_galaxy',
+        name: 'Cosmic Drift',
+        asset: 'cb_galaxy',
+        rarity: ZcRarity.epic,
+        subtitle: 'Star-field space gradient with a nebula swirl.',
+        price: 4900),
     CollectionItem(
         id: 'cb_sakura',
-        name: 'Golden Crown',
-        asset: 'assets/art/cb_sakura.png',
-        rarity: ZcRarity.legendary),
+        name: 'Sakura Storm',
+        asset: 'cb_sakura',
+        rarity: ZcRarity.epic,
+        subtitle: 'Dark forest green with falling sakura petals.',
+        price: 4900),
     CollectionItem(
-        id: 'cb_gold',
-        name: 'Void',
-        asset: 'assets/art/cb_gold.png',
-        rarity: ZcRarity.legendary),
+        id: 'cb_inferno',
+        name: 'Inferno Ace',
+        asset: 'cb_inferno',
+        rarity: ZcRarity.legendary,
+        subtitle: 'Gold lattice with a blazing fire corona.',
+        price: 7900),
+    CollectionItem(
+        id: 'cb_obsidian',
+        name: 'Obsidian Crown',
+        asset: 'cb_obsidian',
+        rarity: ZcRarity.legendary,
+        subtitle: 'Matte black, gold micro-dots, jewelled crown.',
+        price: 9900),
   ];
 
   static const avatars = [
@@ -518,6 +532,18 @@ class CollectionController extends Notifier<Map<String, List<CollectionItem>>> {
       category: [
         for (final it in list)
           it.copyWith(equipped: it.id == id),
+      ],
+    };
+  }
+
+  /// Mark an item as owned after a successful server purchase.
+  void markOwned(String category, String id) {
+    final list = state[category]!;
+    state = {
+      ...state,
+      category: [
+        for (final it in list)
+          it.id == id ? it.copyWith(owned: true) : it,
       ],
     };
   }

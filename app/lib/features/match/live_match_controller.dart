@@ -99,6 +99,7 @@ class LiveMatchController extends Notifier<LiveMatchState?> {
         final pairs = (j['validPairRanks'] as List? ?? const [])
             .map((e) => e.toString())
             .toList();
+        final cardBack = j['equippedCardBack'] as String? ?? 'cb_classic';
         final cur = state;
         if (cur != null) {
           state = cur.copyWith(
@@ -107,6 +108,7 @@ class LiveMatchController extends Notifier<LiveMatchState?> {
             specialTurnsRemaining: turns,
             specialPinnedRank: () => pinned,
             validPairRanks: pairs,
+            myCardBackId: cardBack,
           );
         }
       },

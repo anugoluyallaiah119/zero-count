@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'zc_card_backs.dart';
+
 /// Available card suits.
 enum ZcSuit {
   hearts,
@@ -62,7 +64,7 @@ class ZcPlayingCard extends StatelessWidget {
     this.width = 52,
     this.selected = false,
     this.faceDown = false,
-    this.cardBackAsset = 'assets/art/card_back_zero.png',
+    this.cardBackId = 'cb_classic',
     this.elevation = 0.0,
     this.onTap,
   });
@@ -74,7 +76,8 @@ class ZcPlayingCard extends StatelessWidget {
   final double width;
   final bool selected;
   final bool faceDown;
-  final String cardBackAsset;
+  /// Card back cosmetic id — maps to a ZcCardBacks painter.
+  final String cardBackId;
   final double elevation;
   final VoidCallback? onTap;
 
@@ -95,24 +98,7 @@ class ZcPlayingCard extends StatelessWidget {
     );
 
     final Widget faceContent = faceDown
-        ? ClipRRect(
-            borderRadius: BorderRadius.circular(radius),
-            child: Image.asset(
-              cardBackAsset,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                color: const Color(0xFF4C1D95),
-                child: const Center(
-                  child: Text(
-                    '0',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFFC084FC),
-                    ),
-                  ),
-                ),
-              ),
+        ? ZcCardBackWidget(backId: cardBackId, width: width)
             ),
           )
         : Container(

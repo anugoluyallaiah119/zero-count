@@ -79,6 +79,7 @@ class LiveMatchState {
     this.lastStreakBonus,
     this.specialPinnedRank,
     this.validPairRanks = const [],
+    this.myCardBackId = 'cb_classic',
     this.error,
     this.roundResult,
     this.matchResult,
@@ -134,6 +135,8 @@ class LiveMatchState {
   final String? specialPinnedRank;
   /// Rank labels for exact-pair candidates in the local player's hand.
   final List<String> validPairRanks;
+  /// Card back id the local player has equipped (from handView).
+  final String myCardBackId;
   final String? error;
   final Map<String, dynamic>? roundResult;
   final Map<String, dynamic>? matchResult;
@@ -192,6 +195,7 @@ class LiveMatchState {
     Map<String, dynamic>? Function()? lastStreakBonus,
     String? Function()? specialPinnedRank,
     List<String>? validPairRanks,
+    String? myCardBackId,
     String? Function()? error,
     Map<String, dynamic>? Function()? roundResult,
     Map<String, dynamic>? Function()? matchResult,
@@ -222,6 +226,7 @@ class LiveMatchState {
             ? specialPinnedRank()
             : this.specialPinnedRank,
         validPairRanks: validPairRanks ?? this.validPairRanks,
+        myCardBackId: myCardBackId ?? this.myCardBackId,
         error: error != null ? error() : this.error,
         roundResult: roundResult != null ? roundResult() : this.roundResult,
         matchResult: matchResult != null ? matchResult() : this.matchResult,

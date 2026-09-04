@@ -86,6 +86,29 @@ public class ShopController {
             "SELECT item_id FROM owned_items WHERE user_id = ?", String.class, userId);
     }
 
+    public record EquipBody(String itemId) {}
+
+    /** Equip a card back the player owns. Only card_back kind is supported for now. */
+    @PostMapping("/equip")
+    @Transactional
+    public Map<String, Object> equip(@RequestBody EquipBody body, HttpServletRequest req) {
+        UUID userId = AuthInterceptor.currentUserId(req);
+        var rows = db.queryForList(
+            "SELECT kind FROM shop_items WHERE id = ?", body.itemId());
+        if (rows.isEmpty()) throw new IllegalArgumentException("unknown item");
+        Integer owned = db.queryForObject(
+            "SELECT COUNT(*) FROM owned_items WHERE user_id = ? AND item_id = ?",
+            Integer.class, userId, body.itemId());
+        if (owned == null || owned == 0)
+            throw new IllegalArgumentException("item not owned");
+        String kind = (String) rows.get(0).get("kind");
+        if ("card_back".equals(kind)) {
+            db.update("UPDATE users SET equipped_card_back = ? WHERE id = ?",
+                body.itemId(), userId);
+        }
+        return Map.of("equipped", true, "itemId", body.itemId());
+    }
+
     @ExceptionHandler(WalletService.InsufficientFundsException.class)
     public ResponseEntity<Map<String, Object>> insufficient(
             WalletService.InsufficientFundsException e) {
