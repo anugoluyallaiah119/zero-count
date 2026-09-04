@@ -1,0 +1,89 @@
+name: Release Android AAB
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Version name (e.g. 1.0.1)'
+        required: true
+        default: '1.0.0'
+      version_code:
+        description: 'Version code (integer, must be > previous)'
+        required: true
+        default: '1'
+
+concurrency:
+  group: release-android
+  cancel-in-progress: false
+
+jobs:
+  build-aab:
+    name: Build release AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.x'
+          channel: stable
+          cache: true
+
+      # ── Decode keystore from repository secret ──────────────────────────
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode \
+            > ${{ github.workspace }}/upload-keystore.jks
+
+      - name: Write key.properties
+        run: |
+          cat > app/android/key.properties <<EOF
+          storePassword=${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          keyPassword=${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEYSTORE_KEY_ALIAS }}
+          storeFile=${{ github.workspace }}/upload-keystore.jks
+          EOF
+
+      # ── Firebase google-services.json ───────────────────────────────────
+      - name: Write google-services.json
+        run: |
+          echo '${{ secrets.GOOGLE_SERVICES_JSON }}' \
+            > app/android/app/google-services.json
+
+      # ── Flutter setup ───────────────────────────────────────────────────
+      - name: Flutter pub get
+        working-directory: app
+        run: flutter pub get
+
+      - name: Generate launcher icons
+        working-directory: app
+        run: dart run flutter_launcher_icons
+
+      - name: Generate native splash
+        working-directory: app
+        run: dart run flutter_native_splash:create
+
+      # ── Build ────────────────────────────────────────────────────────────
+      - name: Build release AAB
+        working-directory: app
+        run: |
+          flutter build appbundle \
+            --release \
+            --dart-define=FLAVOR=prod \
+            --build-name=${{ github.event.inputs.version_name }} \
+            --build-number=${{ github.event.inputs.version_code }}
+
+      # ── Upload artifact ──────────────────────────────────────────────────
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zero-count-${{ github.event.inputs.version_name }}+${{ github.event.inputs.version_code }}.aab
+          path: app/build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
