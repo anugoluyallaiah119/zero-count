@@ -35,6 +35,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
   bool _grouping = true;
   int _target = 100;
   int _handSize = 7;
+  int? _pickerShownForCardId;
   late final LiveMatchController _controller;
   late final PlayAreaTheme _theme;
 
@@ -83,6 +84,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
         rank: card.rank,
         suit: _zcSuit(card.suit),
         value: card.value,
+        isSpecial: card.isSpecial,
         kind: fromDiscard ? _FlightKind.take : _FlightKind.draw,
         onDone: () {
           if (mounted) setState(() => _flight = null);
@@ -100,6 +102,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
         rank: card.rank,
         suit: _zcSuit(card.suit),
         value: card.value,
+        isSpecial: card.isSpecial,
         kind: _FlightKind.discard,
         onDone: () {
           if (mounted) setState(() => _flight = null);
@@ -129,6 +132,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
         if (e.contains('discarded')) sfx.discard();
         if (e.contains('Match over')) sfx.win();
       }
+      _maybeOfferPicker(next);
     });
 
     if (match == null || (!match.connected && !match.reconnecting)) {
@@ -184,6 +188,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
                   rank: c.rank,
                   suit: _zcSuit(c.suit),
                   value: c.value,
+                  isSpecial: c.isSpecial,
                 ),
             ],
             topDiscard: match.topDiscard == null
@@ -193,6 +198,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
                     rank: match.topDiscard!.rank,
                     suit: _zcSuit(match.topDiscard!.suit),
                     value: match.topDiscard!.value,
+                    isSpecial: match.topDiscard!.isSpecial,
                     width: 74,
                   ),
             isMyTurn: isMyTurn,
@@ -205,6 +211,11 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
             modeLabel: 'LIVE ROOM',
             sorted: _sorted,
             grouping: _grouping,
+            specialHint: _specialHint(match, isMyTurn),
+            specialHintUrgent: match.mySpecial != null &&
+                !match.specialUsable &&
+                match.specialTurnsRemaining > 0 &&
+                match.specialTurnsRemaining <= 2,
             onBack: () => context.go('/home'),
             onSort: () => setState(() => _sorted = !_sorted),
             onToggleGrouping: () => setState(() => _grouping = !_grouping),
@@ -238,6 +249,20 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
               ),
             ),
           if (_flight != null) IgnorePointer(child: _flight!),
+          if (match.over && match.matchResult != null)
+            _LiveMatchOverOverlay(
+              result: match.matchResult!,
+              seats: match.seats,
+              myUserId: userId,
+              rematchVotes: match.rematchVotes,
+              rematchSeats: match.rematchSeats == 0
+                  ? match.seats.length
+                  : match.rematchSeats,
+              iVoted: userId != null && match.iVotedRematch(userId),
+              streakBonus: match.lastStreakBonus,
+              onRematch: () => _controller.voteRematch(),
+              onLeave: () => context.go('/home'),
+            ),
         ],
       ),
     );
@@ -261,6 +286,151 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
     ));
   }
 
+  String? _specialHint(LiveMatchState match, bool isMyTurn) {
+    if (match.mySpecial == null) return null;
+    final pinned = match.specialPinnedRank;
+    if (pinned != null) return 'LOCKED — $pinned PAIR = ZERO';
+    if (match.specialUsable) return 'READY — PAIR TO ZERO';
+    final n = match.specialTurnsRemaining;
+    if (n <= 0) return 'WAITING FOR PAIR';
+    return 'WAITING • $n ${n == 1 ? 'TURN' : 'TURNS'} LEFT';
+  }
+
+  void _maybeOfferPicker(LiveMatchState next) {
+    final sp = next.mySpecial;
+    if (sp == null) {
+      _pickerShownForCardId = null;
+      return;
+    }
+    final userId = ref.read(authControllerProvider).userId;
+    if (userId == null) return;
+    if (next.currentPlayerIdx != next.mySeatIndex(userId)) return;
+    if (next.specialPinnedRank != null) return;
+    if (_pickerShownForCardId == sp.id) return;
+    if (next.validPairRanks.length < 2) return;
+    _pickerShownForCardId = sp.id;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showPairPicker(next);
+    });
+  }
+
+  Future<void> _showPairPicker(LiveMatchState m) async {
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.65),
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF120631),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: Color(0xFFD946CB), width: 1.4),
+          ),
+          title: const Text(
+            '★ CHOOSE YOUR ZERO',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Nunito',
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.4,
+              color: Color(0xFFFDE047),
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Pick which pair your Special completes into a ZERO group.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(height: 14),
+              for (final rank in m.validPairRanks)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () {
+                        _controller.pinSpecial(rank);
+                        Navigator.of(context).pop();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(colors: [
+                            Color(0xFF2A0E5C),
+                            Color(0xFF140632)
+                          ]),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: const Color(0xFFD946CB), width: 1.1),
+                        ),
+                        child: Row(children: [
+                          Container(
+                            width: 34,
+                            height: 34,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFDE047),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              rank,
+                              style: const TextStyle(
+                                fontFamily: 'Nunito',
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF1A0B3D),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Pair of $rank → ZERO',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontFamily: 'Nunito',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right_rounded,
+                              color: Colors.white70),
+                        ]),
+                      ),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 6),
+              Text(
+                'Best pair is auto-locked if you dismiss.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  fontSize: 10,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('DISMISS',
+                  style: TextStyle(color: Colors.white54)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showRules(BuildContext context) {
     showDialog<void>(
       context: context,
@@ -270,6 +440,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
         content: Text(
           'Draw or take a card, then discard one.\n'
           'Keep your count low — A=1, J/Q/K=10.\n'
+          'A ★ Special card + a pair of the same rank = ZERO group.\n'
           'Call SHOW! when your count is the lowest.\n\n'
           'This room deals $_handSize cards per player.',
           style: const TextStyle(color: Colors.white70, height: 1.5),
@@ -337,6 +508,7 @@ class _CardFlight extends StatefulWidget {
     required this.rank,
     required this.suit,
     required this.value,
+    this.isSpecial = false,
     required this.kind,
     required this.onDone,
   });
@@ -344,6 +516,7 @@ class _CardFlight extends StatefulWidget {
   final String rank;
   final ZcSuit suit;
   final int value;
+  final bool isSpecial;
   final _FlightKind kind;
   final VoidCallback onDone;
 
@@ -382,6 +555,7 @@ class _CardFlightState extends State<_CardFlight>
       rank: widget.rank,
       suit: widget.suit,
       value: widget.value,
+      isSpecial: widget.isSpecial,
       width: 96,
     );
     const back = ZcPlayingCard(
@@ -460,6 +634,304 @@ class _CardFlightState extends State<_CardFlight>
           ),
         );
       },
+    );
+  }
+}
+
+/// Match-over modal with a rematch vote counter and Leave button.
+class _LiveMatchOverOverlay extends StatelessWidget {
+  const _LiveMatchOverOverlay({
+    required this.result,
+    required this.seats,
+    required this.myUserId,
+    required this.rematchVotes,
+    required this.rematchSeats,
+    required this.iVoted,
+    required this.streakBonus,
+    required this.onRematch,
+    required this.onLeave,
+  });
+
+  final Map<String, dynamic> result;
+  final List<LiveSeat> seats;
+  final String? myUserId;
+  final int rematchVotes;
+  final int rematchSeats;
+  final bool iVoted;
+  final Map<String, dynamic>? streakBonus;
+  final VoidCallback onRematch;
+  final VoidCallback onLeave;
+
+  @override
+  Widget build(BuildContext context) {
+    final winnerId = result['winnerId']?.toString();
+    final totals = (result['totals'] as List? ?? const [])
+        .map((e) => (e as num).toInt())
+        .toList();
+    final iWon = winnerId != null && winnerId == myUserId;
+    final nearMiss = result['nearMiss'] == true;
+    final message = result['message']?.toString();
+
+    return Positioned.fill(
+      child: ColoredBox(
+        color: Colors.black.withValues(alpha: 0.72),
+        child: Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1A0B3D), Color(0xFF0A0522)],
+              ),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: iWon ? const Color(0xFFFDE047) : const Color(0xFFA855F7),
+                width: 1.6,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: (iWon
+                          ? const Color(0xFFFDE047)
+                          : const Color(0xFFA855F7))
+                      .withValues(alpha: 0.28),
+                  blurRadius: 30,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  iWon ? 'YOU WIN!' : 'MATCH OVER',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.8,
+                    color: iWon
+                        ? const Color(0xFFFDE047)
+                        : Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Score list per seat.
+                for (var i = 0; i < seats.length && i < totals.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          seats[i].id == myUserId
+                              ? 'You'
+                              : 'Player ${i + 1}',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: seats[i].id == winnerId
+                                ? const Color(0xFFFDE047)
+                                : Colors.white70,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          '${totals[i]} pts',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            color: seats[i].id == winnerId
+                                ? const Color(0xFFFDE047)
+                                : Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (nearMiss && message != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFFDE047),
+                    ),
+                  ),
+                ],
+                if (streakBonus != null && streakBonus!['userId'] == myUserId) ...[
+                  const SizedBox(height: 12),
+                  _StreakBonusBadge(
+                    streak: (streakBonus!['streak'] as num?)?.toInt() ?? 0,
+                    coins: (streakBonus!['bonusCoins'] as num?)?.toInt() ?? 0,
+                  ),
+                ],
+                const SizedBox(height: 18),
+                // Rematch counter pill.
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0x33D946CB),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: const Color(0xFFD946CB),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    '$rematchVotes/$rematchSeats ready',
+                    style: const TextStyle(
+                      fontFamily: 'Nunito',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _OverBtn(
+                        label: iVoted ? 'READY ✓' : 'REMATCH',
+                        primary: !iVoted,
+                        onTap: iVoted ? null : onRematch,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _OverBtn(
+                        label: 'LEAVE',
+                        primary: false,
+                        onTap: onLeave,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OverBtn extends StatelessWidget {
+  const _OverBtn({required this.label, required this.primary, this.onTap});
+
+  final String label;
+  final bool primary;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = onTap == null;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            gradient: primary
+                ? const LinearGradient(
+                    colors: [Color(0xFFD946CB), Color(0xFF8B5CF6)],
+                  )
+                : null,
+            color: primary ? null : const Color(0x22FFFFFF),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: primary
+                  ? const Color(0xFFD946CB)
+                  : const Color(0x66FFFFFF),
+              width: 1.2,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Nunito',
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.0,
+              color: disabled ? Colors.white54 : Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// R1.6 celebration badge for win-streak milestones.
+class _StreakBonusBadge extends StatelessWidget {
+  const _StreakBonusBadge({required this.streak, required this.coins});
+
+  final int streak;
+  final int coins;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFF97316), Color(0xFFEF4444)],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFF97316).withValues(alpha: 0.45),
+            blurRadius: 18,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('🔥',
+              style: TextStyle(fontSize: 20)),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'WIN STREAK ×$streak',
+                style: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.0,
+                  color: Colors.white,
+                ),
+              ),
+              if (coins > 0)
+                Text(
+                  '+$coins coins',
+                  style: const TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

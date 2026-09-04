@@ -42,6 +42,10 @@ class ZcScreenHeader extends ConsumerWidget {
           ZcCurrencyPill(asset: 'assets/art/coin.png', value: '${p?.coins ?? 0}'),
           const SizedBox(width: 6),
           ZcCurrencyPill(asset: 'assets/art/gem.png', value: '${p?.gems ?? 0}'),
+          if ((p?.winStreak ?? 0) > 0) ...[
+            const SizedBox(width: 6),
+            ZcStreakPill(streak: p!.winStreak),
+          ],
           const SizedBox(width: 6),
           switch (trailing) {
             ZcHeaderTrailing.bell => const _BellButton(),
@@ -114,6 +118,38 @@ class ZcCurrencyPill extends StatelessWidget {
           radius: 7,
           backgroundColor: ZcColors.onlineGreen,
           child: Icon(Icons.add_rounded, color: Colors.white, size: 11),
+        ),
+      ]),
+    );
+  }
+}
+
+/// R1.6 — win-streak flame pill shown next to the currency chips.
+class ZcStreakPill extends StatelessWidget {
+  const ZcStreakPill({super.key, required this.streak});
+
+  final int streak;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFF97316), Color(0xFFEF4444)],
+        ),
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        const Text('🔥', style: TextStyle(fontSize: 12)),
+        const SizedBox(width: 3),
+        Text(
+          '$streak',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+          ),
         ),
       ]),
     );

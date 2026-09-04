@@ -12,24 +12,31 @@ library;
 
 import '../../shared/widgets/mini_card.dart';
 
-/// One card as seen over the wire ({id, rank, suit, value}).
+/// One card as seen over the wire ({id, rank, suit, value, isSpecial}).
 class LiveCard {
   const LiveCard(
       {required this.id,
       required this.rank,
       required this.suit,
-      required this.value});
+      required this.value,
+      this.isSpecial = false});
 
   final int id;
   final String rank; // 'A', '2'…'10', 'J', 'Q', 'K'
   final CardSuit suit;
   final int value;
 
+  /// Special cards complete a pair (exactly 2 of a rank) into a ZERO group.
+  /// While unusable, they expire after 4 owner turns; the timer pauses when a
+  /// valid pair exists.
+  final bool isSpecial;
+
   factory LiveCard.fromJson(Map<String, dynamic> j) => LiveCard(
         id: (j['id'] as num).toInt(),
         rank: j['rank'] as String,
         suit: CardSuit.values.byName((j['suit'] as String).toLowerCase()),
         value: (j['value'] as num).toInt(),
+        isSpecial: j['isSpecial'] as bool? ?? false,
       );
 }
 
@@ -65,6 +72,13 @@ class LiveMatchState {
     required this.selectedCardId,
     required this.lastEvents,
     required this.lastSeq,
+    this.specialTurnsRemaining = 0,
+    this.rematchVotes = 0,
+    this.rematchSeats = 0,
+    this.rematchVoters = const [],
+    this.lastStreakBonus,
+    this.specialPinnedRank,
+    this.validPairRanks = const [],
     this.error,
     this.roundResult,
     this.matchResult,
@@ -104,6 +118,22 @@ class LiveMatchState {
   final int? selectedCardId;
   final List<String> lastEvents; // human-readable recent events
   final int lastSeq;
+  /// Owner turns remaining for my Special card. 0 when I don't hold one,
+  /// when it's not my turn, or when the Special is currently usable.
+  final int specialTurnsRemaining;
+  /// Number of players who have voted for a rematch this match-over cycle.
+  final int rematchVotes;
+  /// Number of players required for the rematch to trigger (typically all seats).
+  final int rematchSeats;
+  /// User ids who have voted yes (subset of seats).
+  final List<String> rematchVoters;
+  /// R1.6 — the most recent streak bonus event received this match cycle.
+  /// Keys: userId (String), streak (int), bonusCoins (int).
+  final Map<String, dynamic>? lastStreakBonus;
+  /// "Choose your Zero" — rank label the local player's Special is pinned to.
+  final String? specialPinnedRank;
+  /// Rank labels for exact-pair candidates in the local player's hand.
+  final List<String> validPairRanks;
   final String? error;
   final Map<String, dynamic>? roundResult;
   final Map<String, dynamic>? matchResult;
@@ -120,6 +150,28 @@ class LiveMatchState {
   /// are server-side; here we show the raw count preview like the offline UI).
   int get myCount => myHand.fold(0, (sum, c) => sum + c.value);
 
+  /// The Special card in my hand, or null.
+  LiveCard? get mySpecial {
+    for (final c in myHand) {
+      if (c.isSpecial) return c;
+    }
+    return null;
+  }
+
+  /// True when my hand has at least one rank with exactly 2 normal cards —
+  /// i.e., the Special (if held) can be used to make a ZERO group.
+  bool get specialUsable {
+    final counts = <String, int>{};
+    for (final c in myHand) {
+      if (c.isSpecial) continue;
+      counts[c.rank] = (counts[c.rank] ?? 0) + 1;
+    }
+    return counts.values.any((n) => n == 2);
+  }
+
+  /// True when the local user has voted yes for a rematch this cycle.
+  bool iVotedRematch(String myUserId) => rematchVoters.contains(myUserId);
+
   LiveMatchState copyWith({
     bool? connected,
     String? phase,
@@ -133,6 +185,13 @@ class LiveMatchState {
     int? Function()? selectedCardId,
     List<String>? lastEvents,
     int? lastSeq,
+    int? specialTurnsRemaining,
+    int? rematchVotes,
+    int? rematchSeats,
+    List<String>? rematchVoters,
+    Map<String, dynamic>? Function()? lastStreakBonus,
+    String? Function()? specialPinnedRank,
+    List<String>? validPairRanks,
     String? Function()? error,
     Map<String, dynamic>? Function()? roundResult,
     Map<String, dynamic>? Function()? matchResult,
@@ -152,6 +211,17 @@ class LiveMatchState {
             selectedCardId != null ? selectedCardId() : this.selectedCardId,
         lastEvents: lastEvents ?? this.lastEvents,
         lastSeq: lastSeq ?? this.lastSeq,
+        specialTurnsRemaining:
+            specialTurnsRemaining ?? this.specialTurnsRemaining,
+        rematchVotes: rematchVotes ?? this.rematchVotes,
+        rematchSeats: rematchSeats ?? this.rematchSeats,
+        rematchVoters: rematchVoters ?? this.rematchVoters,
+        lastStreakBonus:
+            lastStreakBonus != null ? lastStreakBonus() : this.lastStreakBonus,
+        specialPinnedRank: specialPinnedRank != null
+            ? specialPinnedRank()
+            : this.specialPinnedRank,
+        validPairRanks: validPairRanks ?? this.validPairRanks,
         error: error != null ? error() : this.error,
         roundResult: roundResult != null ? roundResult() : this.roundResult,
         matchResult: matchResult != null ? matchResult() : this.matchResult,

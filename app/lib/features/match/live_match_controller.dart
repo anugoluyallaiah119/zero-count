@@ -5,6 +5,7 @@ import 'package:stomp_dart_client/stomp_dart_client.dart';
 
 import '../../app/config.dart';
 import '../auth/auth_controller.dart';
+import '../player/profile_repository.dart';
 import 'match_models.dart';
 
 /// Live multiplayer match controller (M1.7).
@@ -93,9 +94,20 @@ class LiveMatchController extends Notifier<LiveMatchState?> {
         final hand = (j['hand'] as List? ?? [])
             .map((c) => LiveCard.fromJson(c as Map<String, dynamic>))
             .toList();
+        final turns = (j['specialTurnsRemaining'] as num?)?.toInt() ?? 0;
+        final pinned = j['specialPinnedRank'] as String?;
+        final pairs = (j['validPairRanks'] as List? ?? const [])
+            .map((e) => e.toString())
+            .toList();
         final cur = state;
         if (cur != null) {
-          state = cur.copyWith(myHand: hand, selectedCardId: () => null);
+          state = cur.copyWith(
+            myHand: hand,
+            selectedCardId: () => null,
+            specialTurnsRemaining: turns,
+            specialPinnedRank: () => pinned,
+            validPairRanks: pairs,
+          );
         }
       },
     );
@@ -136,12 +148,42 @@ class LiveMatchController extends Notifier<LiveMatchState?> {
       state = cur.applyPublicView(j['state'] as Map<String, dynamic>);
       return;
     }
+    if (type == 'rematch_state') {
+      state = cur.copyWith(
+        rematchVotes: (j['votes'] as num?)?.toInt() ?? 0,
+        rematchSeats: (j['seats'] as num?)?.toInt() ?? 0,
+        rematchVoters: (j['voters'] as List? ?? const [])
+            .map((e) => e.toString())
+            .toList(),
+      );
+      return;
+    }
+    if (type == 'streak_bonus') {
+      state = cur.copyWith(lastStreakBonus: () => j);
+      // Refresh the local profile so header coin/streak values update.
+      final me = ref.read(authControllerProvider).userId;
+      if (me != null && j['userId'] == me) {
+        ref.invalidate(profileProvider);
+      }
+      return;
+    }
     final seq = (j['seq'] as num?)?.toInt() ?? cur.lastSeq;
     var next = cur.copyWith(
       lastSeq: seq > cur.lastSeq ? seq : cur.lastSeq,
       lastEvents: _pushEvent(cur.lastEvents, _describe(type, j)),
     );
-    if (type == 'round_ended') {
+    if (type == 'round_started') {
+      // Fresh session (may be a rematch) — clear any lingering match-over UI.
+      next = next.copyWith(
+        over: false,
+        roundResult: () => null,
+        matchResult: () => null,
+        rematchVotes: 0,
+        rematchSeats: 0,
+        rematchVoters: const [],
+        lastStreakBonus: () => null,
+      );
+    } else if (type == 'round_ended') {
       next = next.copyWith(roundResult: () => j);
     } else if (type == 'match_ended') {
       next = next.copyWith(matchResult: () => j, over: true);
@@ -166,6 +208,25 @@ class LiveMatchController extends Notifier<LiveMatchState?> {
 
   void show() => _move({'type': 'show'});
   void endTurn() => _move({'type': 'endTurn'});
+
+  /// Cast a rematch vote. When every seated player has voted, the server
+  /// starts a fresh match automatically.
+  void voteRematch() {
+    final code = _code;
+    if (code != null) _send('/app/room/$code/rematch', const {});
+  }
+
+  /// "Choose your Zero" — pin the local player's Special to a specific rank.
+  void pinSpecial(String rankLabel) {
+    final code = _code;
+    if (code != null) _send('/app/room/$code/pin-special', {'rank': rankLabel});
+  }
+
+  /// Clear a previously placed pin, if any.
+  void clearSpecialPin() {
+    final code = _code;
+    if (code != null) _send('/app/room/$code/pin-special', {'clear': true});
+  }
 
   void selectCard(int cardId) {
     final s = state;
@@ -217,11 +278,16 @@ class LiveMatchController extends Notifier<LiveMatchState?> {
       'drew_stock' => '${who()}drew from the deck',
       'drew_discard' => '${who()}took the discard',
       'discarded' => '${who()}discarded ${p['card']?['rank'] ?? ''}',
+      'special_discarded' => '${who()}special card expired',
+      'special_pinned' => '${who()}locked Special to ${p['rank'] ?? '?'}',
+      'special_unpinned' => '${who()}unlocked Special',
       'turn_passed' => '${who()}ended the turn',
       'showed' => '${who()}called SHOW!',
       'stock_recycled' => 'Discard pile reshuffled',
       'round_ended' => 'Round over',
       'match_ended' => 'Match over',
+      'rematch_state' => 'Rematch — ${p['votes'] ?? 0}/${p['seats'] ?? 0} ready',
+      'streak_bonus' => '🔥 Win streak ×${p['streak'] ?? 0} → +${p['bonusCoins'] ?? 0} coins',
       'stalemate_forced' => 'Stalemate — round forced',
       'player_disconnected' => 'A player disconnected',
       'player_reconnected' => 'A player reconnected',

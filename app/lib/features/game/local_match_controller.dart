@@ -49,6 +49,43 @@ class LocalMatchState {
   /// Current live count of the human hand (score preview, G1.5).
   int get yourCount => ScoringEngine.count(you.hand.cards);
 
+  /// The Special card the human currently holds, or null.
+  Card? get yourSpecial {
+    for (final c in you.hand.cards) {
+      if (c.isSpecial) return c;
+    }
+    return null;
+  }
+
+  /// True when the human's hand has at least one rank with exactly 2 normal
+  /// cards — i.e., the Special (if held) can be used to make a ZERO group.
+  bool get specialUsable {
+    final counts = <Rank, int>{};
+    for (final c in you.hand.cards) {
+      if (c.isSpecial) continue;
+      counts[c.rank] = (counts[c.rank] ?? 0) + 1;
+    }
+    return counts.values.any((n) => n == 2);
+  }
+
+  /// Owner turns remaining before the human's Special auto-discards.
+  /// Only valid while it's the human's turn (0 otherwise or when usable).
+  int get yourSpecialTurnsRemaining {
+    final sp = yourSpecial;
+    if (sp == null || !isHumanTurn) return 0;
+    return session.specialTurnsRemaining(sp);
+  }
+
+  /// Ranks in the human's hand with exactly 2 normal cards — pair targets
+  /// for the "Choose your Zero" picker.
+  List<Rank> get yourPairTargets => session.validPairsFor('you');
+
+  /// Rank the human has pinned their Special to, if any.
+  Rank? get yourPinnedRank {
+    final sp = yourSpecial;
+    return sp == null ? null : session.specialPinnedRank(sp);
+  }
+
   LocalMatchState copyWith({
     GameSession? session,
     int? Function()? selectedCardId,
@@ -129,6 +166,26 @@ class LocalMatchController extends Notifier<LocalMatchState?> {
     final s = state;
     if (s == null || !s.isHumanTurn) return;
     state = s.copyWith(selectedCardId: () => s.selectedCardId == cardId ? null : cardId);
+  }
+
+  /// Pin the human's Special to a specific pair rank ("Choose your Zero").
+  void pinSpecial(Rank rank) {
+    final s = state;
+    if (s == null) return;
+    try {
+      s.session.pinSpecial('you', rank);
+      state = s.copyWith(); // trigger rebuild — derived getters read session
+    } on StateError {
+      // ignore: invalid pin (special missing or pair broken)
+    }
+  }
+
+  /// Clear the human's Special pin (revert to auto-optimize).
+  void clearSpecialPin() {
+    final s = state;
+    if (s == null) return;
+    s.session.clearSpecialPin('you');
+    state = s.copyWith();
   }
 
   void toggleSort() {

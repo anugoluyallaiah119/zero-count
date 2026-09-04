@@ -18,6 +18,8 @@ class PlayerProfile {
     required this.bestCount,
     required this.streakDays,
     required this.elo,
+    required this.winStreak,
+    required this.bestWinStreak,
   });
 
   final String id;
@@ -32,6 +34,10 @@ class PlayerProfile {
   final int bestCount; // -1 = none yet
   final int streakDays;
   final int elo;
+  /// R1.6 — current run of consecutive match wins (reset on any loss).
+  final int winStreak;
+  /// R1.6 — personal all-time peak.
+  final int bestWinStreak;
 
   /// Display name — new users haven't picked one yet.
   String get displayName => name.isEmpty ? 'You' : name;
@@ -58,6 +64,8 @@ class PlayerProfile {
       bestCount: asInt(stats['bestCount'], -1),
       streakDays: asInt(stats['streakDays']),
       elo: asInt(stats['elo'], 1200),
+      winStreak: asInt(stats['winStreak']),
+      bestWinStreak: asInt(stats['bestWinStreak']),
     );
   }
 }

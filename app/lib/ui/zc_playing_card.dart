@@ -69,6 +69,7 @@ class ZcPlayingCard extends StatelessWidget {
   final String rank;
   final ZcSuit suit;
   final int value;
+  final bool isSpecial;
   final double width;
   final bool selected;
   final bool faceDown;
@@ -80,6 +81,17 @@ class ZcPlayingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final height = width * 1.44;
     final radius = width * 0.16;
+
+    final specialGradient = const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF2A0A4B), Color(0xFF13033B)],
+    );
+    final normalGradient = const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFFFFFFF), Color(0xFFF8F7FA)],
+    );
 
     final Widget faceContent = faceDown
         ? ClipRRect(
@@ -105,15 +117,11 @@ class ZcPlayingCard extends StatelessWidget {
         : Container(
             padding: EdgeInsets.fromLTRB(width * 0.08, width * 0.07, width * 0.08, width * 0.07),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFFFFFFF), Color(0xFFF8F7FA)],
-              ),
+              gradient: isSpecial ? specialGradient : normalGradient,
               borderRadius: BorderRadius.circular(radius),
               border: Border.all(
-                color: selected ? const Color(0xFFFDE047) : const Color(0xFFD6CEE5),
-                width: selected ? 2.4 : 1.1,
+                color: selected ? const Color(0xFFFDE047) : (isSpecial ? const Color(0xFFD946CB) : const Color(0xFFD6CEE5)),
+                width: selected ? 2.4 : 1.6,
               ),
               boxShadow: [
                 if (selected) ...[
@@ -137,29 +145,45 @@ class ZcPlayingCard extends StatelessWidget {
             ),
             child: Stack(
               children: [
-                // Top-Left: Rank + Small Suit
+                // Top-Left: Rank + Small Suit (or ★ for specials)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      rank,
+                      isSpecial ? '★' : rank,
                       style: TextStyle(
                         fontSize: width * 0.30,
                         fontWeight: FontWeight.w900,
-                        color: suit.color,
+                        color: isSpecial ? const Color(0xFF2EEA6A) : suit.color,
                         height: 1.0,
                         fontFamily: 'Nunito',
                       ),
                     ),
                     const SizedBox(height: 1),
-                    SuitIcon(suit, width: width * 0.22),
+                    if (!isSpecial) SuitIcon(suit, width: width * 0.22),
                   ],
                 ),
 
-                // Large Center Suit Emblem
+                // Large Center Suit Emblem (or glowing ★ for specials)
                 Center(
-                  child: SuitIcon(suit, width: width * 0.46),
+                  child: isSpecial
+                      ? Text(
+                          '★',
+                          style: TextStyle(
+                            fontSize: width * 0.56,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF2EEA6A),
+                            height: 1.0,
+                            shadows: const [
+                              Shadow(
+                                color: Color(0xFF2EEA6A),
+                                blurRadius: 12,
+                              ),
+                            ],
+                          ),
+                        )
+                      : SuitIcon(suit, width: width * 0.46),
                 ),
 
                 // Bottom-Right: Point Value Badge (A=1, 2..10, J/Q/K=10)
@@ -187,7 +211,7 @@ class ZcPlayingCard extends StatelessWidget {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      '$value',
+                      isSpecial ? 'S' : '$value',
                       style: TextStyle(
                         fontSize: width * 0.18,
                         fontWeight: FontWeight.w900,
@@ -258,6 +282,7 @@ class ZcGroupedCardStack extends StatelessWidget {
                 rank: cards[i].rank,
                 suit: cards[i].suit,
                 value: cards[i].value,
+                isSpecial: cards[i].isSpecial,
                 width: cardWidth,
                 selected: selectedCardId == cards[i].id,
                 onTap: () => onCardTap?.call(cards[i].id),
@@ -329,16 +354,18 @@ class ZcCardFan extends StatelessWidget {
   final int? selectedCardId;
   final ValueChanged<int>? onCardTap;
 
-  List<({int id, String rank, ZcSuit suit, int value})> _normalizeCards() {
-    final List<({int id, String rank, ZcSuit suit, int value})> result = [];
+  List<({int id, String rank, ZcSuit suit, int value, bool isSpecial})> _normalizeCards() {
+    final List<({int id, String rank, ZcSuit suit, int value, bool isSpecial})> result = [];
     for (var i = 0; i < cards.length; i++) {
       final item = cards[i];
-      if (item is ({int id, String rank, ZcSuit suit, int value})) {
+      if (item is ({int id, String rank, ZcSuit suit, int value, bool isSpecial})) {
         result.add(item);
       } else if (item is (String, ZcSuit, int)) {
-        result.add((id: i, rank: item.$1, suit: item.$2, value: item.$3));
+        result.add((id: i, rank: item.$1, suit: item.$2, value: item.$3, isSpecial: false));
+      } else if (item is ({int id, String rank, dynamic suit, int value, bool isSpecial})) {
+        result.add((id: item.id, rank: item.rank, suit: item.suit as ZcSuit, value: item.value, isSpecial: item.isSpecial));
       } else if (item is ({int id, String rank, dynamic suit, int value})) {
-        result.add((id: item.id, rank: item.rank, suit: item.suit as ZcSuit, value: item.value));
+        result.add((id: item.id, rank: item.rank, suit: item.suit as ZcSuit, value: item.value, isSpecial: false));
       } else {
         try {
           result.add((
@@ -346,9 +373,10 @@ class ZcCardFan extends StatelessWidget {
             rank: item.rank.toString(),
             suit: item.suit as ZcSuit,
             value: item.value as int,
+            isSpecial: (item.isSpecial as bool?) ?? false,
           ));
         } catch (_) {
-          result.add((id: i, rank: 'A', suit: ZcSuit.hearts, value: 1));
+          result.add((id: i, rank: 'A', suit: ZcSuit.hearts, value: 1, isSpecial: false));
         }
       }
     }
@@ -360,13 +388,19 @@ class ZcCardFan extends StatelessWidget {
     final normalized = _normalizeCards();
     if (normalized.isEmpty) return const SizedBox();
 
-    // Grouping analysis: Group identical ranks where count >= 3
-    final Map<String, List<({int id, String rank, ZcSuit suit, int value})>> rankBuckets = {};
+    // Grouping analysis: Group identical ranks where count >= 3, including
+    // special-completed groups (2 same rank + 1 special). Specials are
+    // displayed as loose cards so they remain selectable.
+    final Map<String, List<({int id, String rank, ZcSuit suit, int value, bool isSpecial})>> rankBuckets = {};
     for (final c in normalized) {
+      if (c.isSpecial) continue;
       rankBuckets.putIfAbsent(c.rank, () => []).add(c);
     }
+    final specials = normalized.where((c) => c.isSpecial).toList();
 
-    final hasGroups = enableGrouping && rankBuckets.values.any((list) => list.length >= 3);
+    final hasGroups = enableGrouping &&
+        (rankBuckets.values.any((list) => list.length >= 3) ||
+            specials.isNotEmpty);
 
     final List<Widget> items = [];
     final processedRanks = <String>{};
@@ -400,6 +434,7 @@ class ZcCardFan extends StatelessWidget {
               rank: c.rank,
               suit: c.suit,
               value: c.value,
+              isSpecial: c.isSpecial,
               width: cardWidth,
               selected: isSelected,
               onTap: onCardTap == null ? null : () => onCardTap!(c.id),

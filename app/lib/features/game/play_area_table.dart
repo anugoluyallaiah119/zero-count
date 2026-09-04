@@ -36,12 +36,14 @@ class PlayAreaHandCard {
     required this.rank,
     required this.suit,
     required this.value,
+    this.isSpecial = false,
   });
 
   final int id;
   final String rank;
   final ZcSuit suit;
   final int value;
+  final bool isSpecial;
 }
 
 /// Single card in deal flight.
@@ -78,6 +80,8 @@ class PlayAreaTable extends StatefulWidget {
     this.gems,
     this.sorted = false,
     this.grouping = true,
+    this.specialHint,
+    this.specialHintUrgent = false,
     this.onBack,
     this.onSort,
     this.onToggleGrouping,
@@ -110,6 +114,13 @@ class PlayAreaTable extends StatefulWidget {
   final int? gems;
   final bool sorted;
   final bool grouping;
+
+  /// Short contextual message about the human's Special card (ready/waiting).
+  /// Null when no Special is held.
+  final String? specialHint;
+
+  /// True when the hint should render with an urgent (red) accent.
+  final bool specialHintUrgent;
 
   final VoidCallback? onBack;
   final VoidCallback? onSort;
@@ -281,6 +292,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
               rank: top.rank,
               suit: top.suit,
               value: top.value,
+              isSpecial: top.isSpecial,
             );
           });
           _opponentController.forward(from: 0.0);
@@ -443,6 +455,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
           rank: widget.topDiscard!.rank,
           suit: widget.topDiscard!.suit,
           value: widget.topDiscard!.value,
+          isSpecial: widget.topDiscard!.isSpecial,
         );
       } else {
         _drawnCardInfo = null;
@@ -1281,6 +1294,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                     rank: top.rank,
                     suit: top.suit,
                     value: top.value,
+                    isSpecial: top.isSpecial,
                     width: 58,
                   )
                 : Container(
@@ -2001,6 +2015,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                   rank: info.rank,
                   suit: info.suit,
                   value: info.value,
+                  isSpecial: info.isSpecial,
                   width: 56,
                 ),
               ),
@@ -2076,6 +2091,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                       rank: _opponentFlightCard!.rank,
                       suit: _opponentFlightCard!.suit,
                       value: _opponentFlightCard!.value,
+                      isSpecial: _opponentFlightCard!.isSpecial,
                       width: 48,
                     )
                   : ClipRRect(
@@ -2197,6 +2213,13 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                           color: Color(0xFFFDE047),
                         ),
                       ),
+                    ),
+                  ],
+                  if (widget.specialHint != null) ...[
+                    const SizedBox(width: 8),
+                    _SpecialHintPill(
+                      text: widget.specialHint!,
+                      urgent: widget.specialHintUrgent,
                     ),
                   ],
                 ],
@@ -2450,6 +2473,47 @@ class _PlayAreaTableState extends State<PlayAreaTable>
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Small pill showing the human's Special card status (ready or waiting).
+class _SpecialHintPill extends StatelessWidget {
+  const _SpecialHintPill({required this.text, required this.urgent});
+
+  final String text;
+  final bool urgent;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = urgent ? const Color(0xFFEF4444) : const Color(0xFFD946CB);
+    final bg = urgent ? const Color(0x33EF4444) : const Color(0x33D946CB);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: accent, width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('★ ',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 9.5,
+                fontWeight: FontWeight.w900,
+                color: accent,
+              )),
+          Text(text,
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 9.5,
+                fontWeight: FontWeight.w900,
+                color: accent,
+              )),
+        ],
       ),
     );
   }

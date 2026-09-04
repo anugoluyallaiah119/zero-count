@@ -27,32 +27,48 @@ class MiniCard extends StatelessWidget {
     required this.suit,
     this.width = 54,
     this.showValue = true,
+    this.isSpecial = false,
   });
 
   /// Display rank: 'A', '2'…'10', 'J', 'Q', 'K' (or '0' for brand art).
+  /// For special cards [rank] is ignored in rendering.
   final String rank;
   final CardSuit suit;
   final double width;
   final bool showValue;
 
-  /// V1 point values: A=1, 2-10 face, J/Q/K=10.
-  static int valueOf(String rank) => switch (rank) {
-        'A' => 1,
-        'J' || 'Q' || 'K' => 10,
-        '0' => 0,
-        _ => int.tryParse(rank) ?? 0,
-      };
+  /// Special cards complete a pair (exactly 2 of a rank) into a ZERO group;
+  /// they expire after 4 unusable owner turns.
+  final bool isSpecial;
+
+  /// V1 point values: A=1, 2-10 face, J/Q/K=10. Special = 10.
+  static int valueOf(String rank, {bool isSpecial = false}) => isSpecial
+      ? 10
+      : switch (rank) {
+          'A' => 1,
+          'J' || 'Q' || 'K' => 10,
+          '0' => 0,
+          _ => int.tryParse(rank) ?? 0,
+        };
 
   @override
   Widget build(BuildContext context) {
     final height = width * (78 / 54); // V1 aspect 54x78
-    final ink = suit.isRed ? ZeroCountTheme.cardRed : ZeroCountTheme.cardInk;
-    final value = valueOf(rank);
+    final ink = isSpecial
+        ? const Color(0xFF2EEA6A)
+        : (suit.isRed ? ZeroCountTheme.cardRed : ZeroCountTheme.cardInk);
+    final value = valueOf(rank, isSpecial: isSpecial);
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
-        gradient: ZeroCountTheme.cardFace,
+        gradient: isSpecial
+            ? const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF2A0A4B), Color(0xFF13033B)],
+              )
+            : ZeroCountTheme.cardFace,
         borderRadius: BorderRadius.circular(width / 6),
         boxShadow: [
           BoxShadow(
@@ -64,31 +80,41 @@ class MiniCard extends StatelessWidget {
               blurRadius: 14,
               offset: const Offset(0, 6)),
         ],
-        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+        border: Border.all(
+          color: isSpecial ? const Color(0xFFD946CB) : Colors.black.withValues(alpha: 0.06),
+          width: isSpecial ? 1.6 : 1.0,
+        ),
       ),
       child: Stack(
         children: [
-          // corner rank + suit
+          // corner rank + suit (or special glyph)
           Positioned(
             top: width * 0.07,
             left: width * 0.09,
             child: Column(
               children: [
-                Text(rank,
+                Text(isSpecial ? '★' : rank,
                     style: TextStyle(
                         color: ink,
                         fontWeight: FontWeight.w800,
                         fontSize: width * 0.24,
                         height: 1.05)),
-                Text(suit.glyph,
-                    style: TextStyle(color: ink, fontSize: width * 0.2, height: 1.05)),
+                if (!isSpecial)
+                  Text(suit.glyph,
+                      style: TextStyle(color: ink, fontSize: width * 0.2, height: 1.05)),
               ],
             ),
           ),
-          // center pip
+          // center pip (or glowing special star)
           Center(
-            child: Text(suit.glyph,
-                style: TextStyle(color: ink, fontSize: width * 0.44)),
+            child: Text(isSpecial ? '★' : suit.glyph,
+                style: TextStyle(
+                  color: ink,
+                  fontSize: width * 0.44,
+                  shadows: isSpecial
+                      ? const [Shadow(color: Color(0xFF2EEA6A), blurRadius: 10)]
+                      : null,
+                )),
           ),
           // value chip (V1 .card .val)
           if (showValue)
@@ -104,7 +130,7 @@ class MiniCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(width * 0.14),
                 ),
                 alignment: Alignment.center,
-                child: Text('$value',
+                child: Text(isSpecial ? 'S' : '$value',
                     style: TextStyle(
                         color: ZeroCountTheme.cardValueChipText,
                         fontSize: width * 0.17,

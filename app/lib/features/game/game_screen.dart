@@ -39,6 +39,7 @@ class GameScreen extends ConsumerStatefulWidget {
 class _GameScreenState extends ConsumerState<GameScreen> {
   bool _sorted = false;
   bool _grouping = true;
+  int? _pickerShownForCardId;
 
   static const _aiAvatars = [
     'assets/art/play_area_avatar_1.png',
@@ -87,6 +88,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           next.roundResult == null) {
         sfx.yourTurn();
       }
+      _maybeOfferPicker(next);
     });
 
     return Scaffold(
@@ -144,6 +146,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 rank: c.rank.label,
                 suit: _zcSuit(c.suit),
                 value: c.value,
+                isSpecial: c.isSpecial,
               ),
           ],
           topDiscard: top == null
@@ -153,6 +156,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   rank: top.rank.label,
                   suit: _zcSuit(top.suit),
                   value: top.value,
+                  isSpecial: top.isSpecial,
                   width: 68,
                 ),
           isMyTurn: isMyTurn,
@@ -168,6 +172,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           gems: gems,
           sorted: _sorted,
           grouping: _grouping,
+          specialHint: _specialHint(m),
+          specialHintUrgent: m.yourSpecial != null &&
+              !m.specialUsable &&
+              m.yourSpecialTurnsRemaining > 0 &&
+              m.yourSpecialTurnsRemaining <= 2,
           onBack: () {
             ref.read(localMatchProvider.notifier).stopIfAny();
             context.pop();
@@ -228,6 +237,180 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     );
   }
 
+  void _maybeOfferPicker(LocalMatchState next) {
+    // Show the "Choose your Zero" picker when the human just gained a Special
+    // AND has 2+ different pair candidates. Only once per Special instance.
+    final sp = next.yourSpecial;
+    if (sp == null) {
+      _pickerShownForCardId = null;
+      return;
+    }
+    if (!next.isHumanTurn) return;
+    if (next.yourPinnedRank != null) return;
+    if (_pickerShownForCardId == sp.id) return;
+    final targets = next.yourPairTargets;
+    if (targets.length < 2) return;
+    _pickerShownForCardId = sp.id;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showPairPicker(next, targets);
+    });
+  }
+
+  Future<void> _showPairPicker(LocalMatchState m, List<eng.Rank> targets) async {
+    final currentCount = m.yourCount;
+    final controller = ref.read(localMatchProvider.notifier);
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.65),
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF120631),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: Color(0xFFD946CB), width: 1.4),
+          ),
+          title: const Text(
+            '★ CHOOSE YOUR ZERO',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Nunito',
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.4,
+              color: Color(0xFFFDE047),
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Pick which pair your Special completes into a ZERO group.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(height: 14),
+              for (final rank in targets)
+                _pairChoiceRow(
+                  rank: rank,
+                  currentCount: currentCount,
+                  hand: m.you.hand.cards,
+                  onTap: () {
+                    controller.pinSpecial(rank);
+                    Navigator.of(context).pop();
+                  },
+                ),
+              const SizedBox(height: 6),
+              Text(
+                'Best pair is auto-locked if you dismiss.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  fontSize: 10,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('DISMISS',
+                  style: TextStyle(color: Colors.white54)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _pairChoiceRow({
+    required eng.Rank rank,
+    required int currentCount,
+    required List<eng.Card> hand,
+    required VoidCallback onTap,
+  }) {
+    final pinned = eng.ScoringEngine.count(hand, pinRank: rank);
+    final valueSaved = rank.value * 2;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF2A0E5C), Color(0xFF140632)],
+              ),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFFD946CB),
+                width: 1.1,
+              ),
+            ),
+            child: Row(children: [
+              Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFDE047),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  rank.label,
+                  style: const TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF1A0B3D),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pair of ${rank.label}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'Nunito',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      'saves $valueSaved pts',
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontFamily: 'Nunito',
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '$currentCount → $pinned',
+                style: const TextStyle(
+                  color: Color(0xFF4ADE80),
+                  fontFamily: 'Nunito',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _soon(String what) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text('$what arrive with the social update'),
@@ -235,6 +418,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       backgroundColor: ZcColors.panelPurple,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
+  }
+
+  String? _specialHint(LocalMatchState m) {
+    if (m.yourSpecial == null) return null;
+    if (m.yourPinnedRank != null) {
+      return 'LOCKED — ${m.yourPinnedRank!.label} PAIR = ZERO';
+    }
+    if (m.specialUsable) return 'READY — PAIR TO ZERO';
+    final n = m.yourSpecialTurnsRemaining;
+    if (n <= 0) return 'WAITING FOR PAIR';
+    return 'WAITING • $n ${n == 1 ? 'TURN' : 'TURNS'} LEFT';
   }
 
   static ZcSuit _zcSuit(eng.Suit s) => switch (s) {
@@ -654,7 +848,7 @@ class _ResultsAnnouncementOverlay extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  isMatchEnd ? 'PLAY AGAIN' : 'NEXT ROUND ▶',
+                                  isMatchEnd ? 'REMATCH' : 'NEXT ROUND ▶',
                                   style: const TextStyle(
                                     fontFamily: 'Nunito',
                                     fontSize: 13.5,
