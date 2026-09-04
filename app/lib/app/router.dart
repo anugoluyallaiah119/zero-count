@@ -18,7 +18,6 @@ import '../features/match/live_game_screen.dart';
 import '../features/social/invite_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/events/events_screen.dart';
-import '../features/collection/collection_grid_screen.dart';
 import '../features/collection/store_screen.dart';
 
 /// App navigation. Routes:
@@ -119,25 +118,27 @@ final routerProvider = Provider<GoRouter>((ref) {
               initialTab: state.extra as int? ?? 0)),
       GoRoute(
           path: '/collection',
-          builder: (context, state) => const StoreScreen()),
+          builder: (context, state) => StoreScreen(
+                initialTab: state.uri.queryParameters['tab'],
+              )),
       GoRoute(
           path: '/collection/card-backs',
-          builder: (context, state) => const CardBacksScreen()),
+          redirect: (_, __) => '/collection?tab=card-backs'),
       GoRoute(
           path: '/collection/special-cards',
-          builder: (context, state) => const SpecialCardsScreen()),
+          redirect: (_, __) => '/collection?tab=special-cards'),
       GoRoute(
           path: '/collection/avatars',
-          builder: (context, state) => const AvatarsScreen()),
+          redirect: (_, __) => '/collection?tab=avatars'),
       GoRoute(
           path: '/collection/themes',
-          builder: (context, state) => const ThemesScreen()),
+          redirect: (_, __) => '/collection?tab=themes'),
       GoRoute(
           path: '/collection/effects',
-          builder: (context, state) => const EffectsScreen()),
+          redirect: (_, __) => '/collection?tab=effects'),
       GoRoute(
           path: '/collection/stickers',
-          builder: (context, state) => const StickersScreen()),
+          redirect: (_, __) => '/collection?tab=stickers'),
     ],
   );
   ref.onDispose(() {

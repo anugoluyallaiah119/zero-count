@@ -10,9 +10,17 @@ import 'themes_screen.dart';
 /// Shared Collection grid screen (Card Backs / Avatars / Effects / Stickers /
 /// Special Cards) driven by [GridScreenConfig].
 class CollectionGridScreen extends ConsumerStatefulWidget {
-  const CollectionGridScreen({super.key, required this.config});
+  const CollectionGridScreen({
+    super.key,
+    required this.config,
+    this.embedded = false,
+  });
 
   final GridScreenConfig config;
+
+  /// When true, renders body content only — no Scaffold, no CollectionHeader,
+  /// no BottomNav. Used by the Store tab to host a category inline.
+  final bool embedded;
 
   @override
   ConsumerState<CollectionGridScreen> createState() =>
@@ -83,6 +91,29 @@ class _CollectionGridScreenState
   Widget build(BuildContext context) {
     final all = ref.watch(collectionProvider)[c.category]!;
     final items = _filtered(all);
+    if (widget.embedded) {
+      // Store-tab embed: chrome comes from the host (Scaffold, header,
+      // category chips, bottom nav). Return the scrollable body only.
+      return SingleChildScrollView(
+        child: c.heroDark
+            ? Column(
+                children: [
+                  _hero(all),
+                  const SizedBox(height: 16),
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: LcColors.bg,
+                      borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(26)),
+                    ),
+                    padding: const EdgeInsets.only(top: 14),
+                    child: _gridSection(items),
+                  ),
+                ],
+              )
+            : _gridSection(items),
+      );
+    }
     return Scaffold(
       backgroundColor: c.heroDark ? ZcColors.bgBottom : LcColors.bg,
       body: SafeArea(

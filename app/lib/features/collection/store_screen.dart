@@ -1,24 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../ui/zc_bottom_nav.dart';
 import '../../ui/zc_theme.dart';
-import 'collection_data.dart';
+import '../player/profile_repository.dart';
+import 'collection_grid_screen.dart';
 import 'collection_widgets.dart';
+import 'themes_screen.dart';
 
-/// Collection → Store (light theme mockup). Purchases are placeholders
-/// ("Price Locked") until the store backend ships post-V2.
-class StoreScreen extends StatefulWidget {
-  const StoreScreen({super.key});
+/// Store tab (light theme). Hosts 8 category tabs; sub-category content is
+/// embedded so the tab bar and STORE header stay visible.
+class StoreScreen extends ConsumerStatefulWidget {
+  const StoreScreen({super.key, this.initialTab});
+
+  /// Optional deep-link into a specific category tab.
+  final String? initialTab;
 
   @override
-  State<StoreScreen> createState() => _StoreScreenState();
+  ConsumerState<StoreScreen> createState() => _StoreScreenState();
 }
 
-class _StoreScreenState extends State<StoreScreen> {
-  int _cat = 0;
-  final _scroll = ScrollController();
-  final _currencyKey = GlobalKey();
+class _StoreScreenState extends ConsumerState<StoreScreen> {
+  int _cat = 1; // Coins & Gems by default (matches mockup).
+  int _selectedCoin = 2;
+  int _selectedGem = 2;
+  int _selectedCoinPack = 2;
+  int _selectedGemPack = 2;
 
   static const _cats = [
     'Featured',
@@ -31,38 +39,15 @@ class _StoreScreenState extends State<StoreScreen> {
     'Stickers',
   ];
 
-  static const _routes = {
-    'Special Cards': '/collection/special-cards',
-    'Card Backs': '/collection/card-backs',
-    'Avatars': '/collection/avatars',
-    'Themes': '/collection/themes',
-    'Effects': '/collection/effects',
-    'Stickers': '/collection/stickers',
-  };
-
-  void _onCategory(int i) {
-    final label = _cats[i];
-    final route = _routes[label];
-    if (route != null) {
-      context.push(route);
-      return;
-    }
-    if (label == 'Coins & Gems') {
-      setState(() => _cat = i);
-      final ctx = _currencyKey.currentContext;
-      if (ctx != null) {
-        Scrollable.ensureVisible(ctx,
-            duration: const Duration(milliseconds: 300), alignment: 0.05);
-      }
-      return;
-    }
-    setState(() => _cat = i);
-  }
-
   @override
-  void dispose() {
-    _scroll.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    final initial = widget.initialTab;
+    if (initial != null) {
+      final needle = initial.replaceAll('-', ' ').toLowerCase();
+      final idx = _cats.indexWhere((c) => c.toLowerCase() == needle);
+      if (idx >= 0) _cat = idx;
+    }
   }
 
   @override
@@ -72,33 +57,15 @@ class _StoreScreenState extends State<StoreScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const CollectionHeader(
-              icon: Icons.shopping_cart_rounded,
-              title: 'STORE',
-              subtitle: 'Enhance your experience. Stand out in every game.',
-              trailing: Icons.shopping_bag_outlined,
-            ),
-            const SizedBox(height: 10),
-            _categoryChips(),
+            _StoreHeader(),
             const SizedBox(height: 8),
-            Expanded(
-              child: SingleChildScrollView(
-                controller: _scroll,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _featuredBanner(),
-                    _sectionTitle('Coins & Gems', key: _currencyKey),
-                    _currencyPanels(),
-                    _sectionTitle('Special Offers'),
-                    _specialOffers(),
-                    _sectionTitle('Popular Items'),
-                    _popularItems(),
-                    const SizedBox(height: 14),
-                  ],
-                ),
-              ),
+            _CategoryChips(
+              cats: _cats,
+              selected: _cat,
+              onSelect: (i) => setState(() => _cat = i),
             ),
+            const SizedBox(height: 8),
+            Expanded(child: _body()),
           ],
         ),
       ),
@@ -107,222 +74,971 @@ class _StoreScreenState extends State<StoreScreen> {
     );
   }
 
-  Widget _categoryChips() {
-    const icons = [
-      Icons.star_rounded,
-      Icons.monetization_on_outlined,
-      Icons.style_outlined,
-      Icons.credit_card_rounded,
-      Icons.sentiment_satisfied_alt_rounded,
-      Icons.image_outlined,
-      Icons.auto_awesome_rounded,
-      Icons.emoji_emotions_outlined,
-    ];
-    return SizedBox(
-      height: 40,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        children: [
-          for (var i = 0; i < _cats.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(right: 7),
-              child: GestureDetector(
-                onTap: () => _onCategory(i),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: i == _cat ? LcColors.purple : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                        color: i == _cat
-                            ? LcColors.purple
-                            : LcColors.chipBorder),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(icons[i],
-                          size: 14,
-                          color: i == _cat
-                              ? Colors.white
-                              : LcColors.textMuted),
-                      const SizedBox(width: 5),
-                      Text(_cats[i],
-                          style: TextStyle(
-                              color: i == _cat
-                                  ? Colors.white
-                                  : LcColors.textMuted,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800)),
-                    ],
-                  ),
-                ),
+  /// Category body — IndexedStack keeps scroll state per tab.
+  Widget _body() {
+    return IndexedStack(
+      index: _cat,
+      children: [
+        _featuredTab(),
+        _coinsGemsTab(),
+        const CollectionGridScreen(
+            config: _kSpecialCardsConfig, embedded: true),
+        const CollectionGridScreen(
+            config: _kCardBacksConfig, embedded: true),
+        const CollectionGridScreen(config: _kAvatarsConfig, embedded: true),
+        const ThemesScreenImpl(),
+        const CollectionGridScreen(config: _kEffectsConfig, embedded: true),
+        const CollectionGridScreen(config: _kStickersConfig, embedded: true),
+      ],
+    );
+  }
+
+  // ---------- FEATURED tab -------------------------------------------------
+
+  Widget _featuredTab() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _PowerYourGameBanner(),
+            const SizedBox(height: 18),
+            const Text(
+              'Featured Categories',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                color: LcColors.textDark,
               ),
             ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (var i = 2; i < _cats.length; i++)
+                  _FeaturedTile(
+                    label: _cats[i],
+                    onTap: () => setState(() => _cat = i),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------- COINS & GEMS tab --------------------------------------------
+
+  Widget _coinsGemsTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: _PowerYourGameBanner(),
+          ),
+          const _SectionTitle('Coins & Gems'),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _CurrencyPanel(
+                    title: 'COINS',
+                    iconAsset: 'assets/art/coin.png',
+                    accent: const Color(0xFFF59E0B),
+                    accentSoft: const Color(0xFFFEF3C7),
+                    art: 'assets/art/store_coins.png',
+                    subtitle:
+                        'Use coins to unlock items,\njoin events and more.',
+                    quantities: const ['1,000', '5,000', '10,000', '25,000'],
+                    packages: const [
+                      _Pkg('10,000', '₹89', null),
+                      _Pkg('25,000', '₹199', '10%'),
+                      _Pkg('60,000', '₹449', '20%'),
+                      _Pkg('150,000', '₹999', '30%'),
+                    ],
+                    selectedQty: _selectedCoin,
+                    selectedPkg: _selectedCoinPack,
+                    onQty: (i) => setState(() => _selectedCoin = i),
+                    onPkg: (i) => setState(() => _selectedCoinPack = i),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _CurrencyPanel(
+                    title: 'GEMS',
+                    iconAsset: 'assets/art/gem.png',
+                    accent: const Color(0xFF7C3AED),
+                    accentSoft: const Color(0xFFEDE7FB),
+                    art: 'assets/art/store_gems.png',
+                    subtitle:
+                        'Use gems for premium\nitems and exclusive\ncollections.',
+                    quantities: const ['60', '250', '520', '1,100'],
+                    packages: const [
+                      _Pkg('60', '₹89', null),
+                      _Pkg('250', '₹199', '10%'),
+                      _Pkg('520', '₹449', '20%'),
+                      _Pkg('1,100', '₹999', '30%'),
+                    ],
+                    selectedQty: _selectedGem,
+                    selectedPkg: _selectedGemPack,
+                    onQty: (i) => setState(() => _selectedGem = i),
+                    onPkg: (i) => setState(() => _selectedGemPack = i),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const _SectionTitle('Special Offers'),
+          const _SpecialOffersStrip(),
+          const SizedBox(height: 14),
+          const _TrustBadgesRow(),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// HEADER
+// =============================================================================
+
+class _StoreHeader extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = ref.watch(profileProvider).valueOrNull;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+      child: Row(
+        children: [
+          _RoundIconBtn(
+            icon: Icons.chevron_left_rounded,
+            onTap: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/home');
+              }
+            },
+          ),
+          const SizedBox(width: 10),
+          const _StoreBadgeIcon(),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'STORE',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: LcColors.textDark,
+                    letterSpacing: 0.5,
+                    height: 1.05,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Enhance your experience. Stand out in every game.',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: LcColors.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 4),
+          _CurrencyPill(asset: 'assets/art/coin.png', value: p?.coins ?? 0),
+          const SizedBox(width: 6),
+          _CurrencyPill(asset: 'assets/art/gem.png', value: p?.gems ?? 0),
+          const SizedBox(width: 6),
+          const _GiftBellButton(badge: 2),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoundIconBtn extends StatelessWidget {
+  const _RoundIconBtn({required this.icon, this.onTap});
+  final IconData icon;
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: LcColors.chipBorder, width: 1.2),
+          ),
+          child: Icon(icon, color: LcColors.textDark, size: 22),
+        ),
+      ),
+    );
+  }
+}
+
+class _StoreBadgeIcon extends StatelessWidget {
+  const _StoreBadgeIcon();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF8B46E8), Color(0xFF6D28D9)],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x40A855F7),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: const Icon(Icons.shopping_bag_rounded,
+          color: Colors.white, size: 22),
+    );
+  }
+}
+
+class _CurrencyPill extends StatelessWidget {
+  const _CurrencyPill({required this.asset, required this.value});
+  final String asset;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(5, 4, 3, 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: LcColors.chipBorder, width: 1.1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(asset,
+              width: 16,
+              height: 16,
+              errorBuilder: (_, __, ___) => const Icon(
+                    Icons.monetization_on_rounded,
+                    size: 16,
+                    color: Color(0xFFF59E0B),
+                  )),
+          const SizedBox(width: 3),
+          Text(
+            _fmt(value),
+            style: const TextStyle(
+              color: LcColors.textDark,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(width: 3),
+          Container(
+            width: 15,
+            height: 15,
+            decoration: const BoxDecoration(
+              color: Color(0xFF10B981),
+              shape: BoxShape.circle,
+            ),
+            child:
+                const Icon(Icons.add_rounded, color: Colors.white, size: 11),
+          ),
         ],
       ),
     );
   }
 
-  Widget _featuredBanner() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: LcColors.chipBorder),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset('assets/art/th_galaxy.png',
-                fit: BoxFit.cover,
-                alignment: Alignment.centerRight),
+  static String _fmt(int n) {
+    final s = n.toString();
+    final buf = StringBuffer();
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+      buf.write(s[i]);
+    }
+    return buf.toString();
+  }
+}
+
+class _GiftBellButton extends StatelessWidget {
+  const _GiftBellButton({required this.badge});
+  final int badge;
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: LcColors.chipBorder, width: 1.2),
           ),
-          Positioned.fill(
+          child: const Icon(Icons.card_giftcard_rounded,
+              color: LcColors.textDark, size: 22),
+        ),
+        if (badge > 0)
+          Positioned(
+            top: -4,
+            right: -4,
             child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [Colors.white, Color(0x00FFFFFF)],
-                  stops: [0.45, 0.85],
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444),
+                borderRadius: BorderRadius.circular(9),
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+              child: Text(
+                '$badge',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  height: 1.1,
                 ),
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16),
+      ],
+    );
+  }
+}
+
+// =============================================================================
+// CATEGORY CHIPS
+// =============================================================================
+
+class _CategoryChips extends StatelessWidget {
+  const _CategoryChips({
+    required this.cats,
+    required this.selected,
+    required this.onSelect,
+  });
+  final List<String> cats;
+  final int selected;
+  final ValueChanged<int> onSelect;
+
+  static const _icons = [
+    Icons.star_rounded,
+    Icons.monetization_on_rounded,
+    Icons.style_rounded,
+    Icons.credit_card_rounded,
+    Icons.sentiment_satisfied_alt_rounded,
+    Icons.image_rounded,
+    Icons.auto_awesome_rounded,
+    Icons.emoji_emotions_rounded,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        itemCount: cats.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final active = i == selected;
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(11),
+              onTap: () => onSelect(i),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(11),
+                  border: Border.all(
+                    color: active ? LcColors.purple : LcColors.chipBorder,
+                    width: active ? 1.6 : 1.0,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(_icons[i],
+                        size: 15,
+                        color:
+                            active ? LcColors.purple : LcColors.textMuted),
+                    const SizedBox(width: 5),
+                    Text(
+                      cats[i],
+                      style: TextStyle(
+                        color:
+                            active ? LcColors.purple : LcColors.textMuted,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// HERO "POWER YOUR GAME"
+// =============================================================================
+
+class _PowerYourGameBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF7EEFF), Color(0xFFEFE3FE)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE0D3F5), width: 1),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 5,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('NEW THEME',
-                    style: ZcText.body(9.5).copyWith(
-                        color: LcColors.purple, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    Text('Cosmic Drift',
-                        style: ZcText.heading(19)
-                            .copyWith(color: LcColors.textDark)),
-                    const SizedBox(width: 8),
-                    const RarityChip(rarity: _Rarity.epic),
-                  ],
-                ),
-                const SizedBox(height: 5),
-                Text('A vast space to focus,\nthink and win.',
-                    style: ZcText.body(11.5)
-                        .copyWith(color: LcColors.textMuted)),
-                const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 18, vertical: 10),
+                      horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                        colors: [Color(0xFF8B46E8), Color(0xFF5B21B6)]),
-                    borderRadius: BorderRadius.circular(11),
+                    color: LcColors.purple,
+                    borderRadius: BorderRadius.circular(7),
                   ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Explore',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800)),
-                      Icon(Icons.chevron_right_rounded,
-                          color: Colors.white, size: 16),
-                    ],
+                  child: const Text(
+                    'BEST VALUE',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.6,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
+                const Text(
+                  'Power Your\nGame',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: LcColors.textDark,
+                    height: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Coins for matches.\nGems for premium rewards.',
+                  style: TextStyle(
+                    color: LcColors.textMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Row(
                   children: [
-                    for (var i = 0; i < 5; i++)
-                      Container(
-                        margin: const EdgeInsets.only(right: 4),
-                        width: i == 0 ? 14 : 5,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: i == 0
-                              ? LcColors.purple
-                              : const Color(0xFFCFC8E4),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
+                    _MiniFeatureChip(
+                      icon: 'assets/art/coin.png',
+                      title: 'Play More',
+                      subtitle: 'Win Bigger',
+                      accent: const Color(0xFFF59E0B),
+                    ),
+                    const SizedBox(width: 8),
+                    _MiniFeatureChip(
+                      icon: 'assets/art/gem.png',
+                      title: 'Unlock More',
+                      subtitle: 'Stand Out',
+                      accent: LcColors.purple,
+                    ),
                   ],
                 ),
               ],
             ),
           ),
+          Expanded(
+            flex: 4,
+            child: Image.asset(
+              'assets/art/store_pack_purple.png',
+              height: 130,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.card_giftcard_rounded,
+                size: 100,
+                color: LcColors.purple,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
+}
 
-  Widget _sectionTitle(String t, {Key? key}) {
+class _MiniFeatureChip extends StatelessWidget {
+  const _MiniFeatureChip({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.accent,
+  });
+  final String icon;
+  final String title;
+  final String subtitle;
+  final Color accent;
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(7, 5, 9, 5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE4DFF2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Image.asset(icon,
+                width: 14,
+                height: 14,
+                errorBuilder: (_, __, ___) =>
+                    Icon(Icons.star_rounded, size: 12, color: accent)),
+          ),
+          const SizedBox(width: 5),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(title,
+                  style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: LcColors.textDark,
+                      height: 1.1)),
+              Text(subtitle,
+                  style: const TextStyle(
+                      fontSize: 9,
+                      color: LcColors.textMuted,
+                      fontWeight: FontWeight.w600,
+                      height: 1.1)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// SECTION TITLE
+// =============================================================================
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
+  final String text;
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      key: key,
-      padding: const EdgeInsets.fromLTRB(16, 16, 14, 8),
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
       child: Row(
         children: [
-          Text(t,
-              style:
-                  ZcText.heading(15).copyWith(color: LcColors.textDark)),
+          Text(text,
+              style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  color: LcColors.textDark)),
           const Spacer(),
-          Text('View All',
-              style: ZcText.body(11.5).copyWith(
-                  color: LcColors.purple, fontWeight: FontWeight.w800)),
+          const Text('View All',
+              style: TextStyle(
+                  color: LcColors.textDark,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700)),
           const Icon(Icons.chevron_right_rounded,
-              color: LcColors.purple, size: 16),
+              color: LcColors.textDark, size: 18),
         ],
       ),
     );
   }
+}
 
-  Widget _currencyPanels() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Row(
-        children: [
-          Expanded(
-            child: _currencyPanel(
-              icon: 'assets/art/coin.png',
-              title: 'COINS',
-              desc: 'Use coins to unlock items, join events and more.',
-              art: 'assets/art/store_coins.png',
-              amounts: const ['1,000', '5,000', '10,000', '25,000'],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _currencyPanel(
-              icon: 'assets/art/gem.png',
-              title: 'GEMS',
-              desc: 'Use gems for premium items and exclusive collections.',
-              art: 'assets/art/store_gems.png',
-              amounts: const ['60', '250', '520', '1,100'],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+// =============================================================================
+// CURRENCY PANEL (COINS / GEMS)
+// =============================================================================
 
-  Widget _currencyPanel({
-    required String icon,
-    required String title,
-    required String desc,
-    required String art,
-    required List<String> amounts,
-  }) {
+class _Pkg {
+  const _Pkg(this.qty, this.price, this.extra);
+  final String qty;
+  final String price;
+  final String? extra;
+}
+
+class _CurrencyPanel extends StatelessWidget {
+  const _CurrencyPanel({
+    required this.title,
+    required this.iconAsset,
+    required this.accent,
+    required this.accentSoft,
+    required this.art,
+    required this.subtitle,
+    required this.quantities,
+    required this.packages,
+    required this.selectedQty,
+    required this.selectedPkg,
+    required this.onQty,
+    required this.onPkg,
+  });
+  final String title;
+  final String iconAsset;
+  final Color accent;
+  final Color accentSoft;
+  final String art;
+  final String subtitle;
+  final List<String> quantities;
+  final List<_Pkg> packages;
+  final int selectedQty;
+  final int selectedPkg;
+  final ValueChanged<int> onQty;
+  final ValueChanged<int> onPkg;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: LcColors.chipBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 72,
+            child: Stack(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Image.asset(iconAsset,
+                            width: 16,
+                            height: 16,
+                            errorBuilder: (_, __, ___) => Icon(
+                                  Icons.monetization_on_rounded,
+                                  size: 16,
+                                  color: accent,
+                                )),
+                        const SizedBox(width: 5),
+                        Text(title,
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                                color: accent,
+                                letterSpacing: 0.3)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                          color: LcColors.textMuted,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w600,
+                          height: 1.3),
+                    ),
+                  ],
+                ),
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Image.asset(
+                    art,
+                    width: 78,
+                    height: 60,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Icon(
+                      title == 'COINS'
+                          ? Icons.monetization_on_rounded
+                          : Icons.diamond_rounded,
+                      color: accent,
+                      size: 44,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 30,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: quantities.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 5),
+              itemBuilder: (context, i) {
+                final active = i == selectedQty;
+                return GestureDetector(
+                  onTap: () => onQty(i),
+                  child: Container(
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: active ? accent : Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: active ? accent : LcColors.chipBorder,
+                        width: 1.1,
+                      ),
+                    ),
+                    child: Text(
+                      quantities[i],
+                      style: TextStyle(
+                        color: active ? Colors.white : LcColors.textDark,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (var i = 0; i < packages.length; i++) ...[
+            _PackageRow(
+              iconAsset: iconAsset,
+              accent: accent,
+              accentSoft: accentSoft,
+              pkg: packages[i],
+              selected: i == selectedPkg,
+              onTap: () => onPkg(i),
+            ),
+            if (i < packages.length - 1) const SizedBox(height: 6),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PackageRow extends StatelessWidget {
+  const _PackageRow({
+    required this.iconAsset,
+    required this.accent,
+    required this.accentSoft,
+    required this.pkg,
+    required this.selected,
+    required this.onTap,
+  });
+  final String iconAsset;
+  final Color accent;
+  final Color accentSoft;
+  final _Pkg pkg;
+  final bool selected;
+  final VoidCallback onTap;
+
+  Color _extraColor(String? e) {
+    if (e == null) return const Color(0xFFF97316);
+    if (e.startsWith('30')) return const Color(0xFFF97316);
+    if (e.startsWith('20')) return const Color(0xFFEF4444);
+    return const Color(0xFF7C3AED);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
+          decoration: BoxDecoration(
+            color: selected ? accentSoft : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected ? accent : const Color(0xFFE9E4F5),
+              width: selected ? 1.4 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Image.asset(iconAsset,
+                  width: 18,
+                  height: 18,
+                  errorBuilder: (_, __, ___) => Icon(
+                        Icons.monetization_on_rounded,
+                        size: 18,
+                        color: accent,
+                      )),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  pkg.qty,
+                  style: const TextStyle(
+                    color: LcColors.textDark,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: Text(
+                  pkg.price,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              if (pkg.extra != null) ...[
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 5, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _extraColor(pkg.extra),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(pkg.extra!,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                              height: 1)),
+                      const Text('EXTRA',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 7,
+                              fontWeight: FontWeight.w900,
+                              height: 1.1)),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// SPECIAL OFFERS
+// =============================================================================
+
+class _SpecialOffersStrip extends StatelessWidget {
+  const _SpecialOffersStrip();
+  @override
+  Widget build(BuildContext context) {
+    const offers = [
+      _Offer('-30%', '2d 14h', 'assets/art/store_pack_purple.png',
+          'Cosmic Pack'),
+      _Offer(
+          '-25%', '2d 14h', 'assets/art/store_pack_royal.png', 'Royal Set'),
+      _Offer('-20%', '1d 14h', 'assets/art/store_pack_ice.png',
+          'Ice Collection'),
+      _Offer('-30%', '2d 14h', 'assets/art/store_sticker_bundle.png',
+          'Sticker Bundle'),
+    ];
+    return SizedBox(
+      height: 200,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        itemCount: offers.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (_, i) => _OfferCard(offer: offers[i]),
+      ),
+    );
+  }
+}
+
+class _Offer {
+  const _Offer(this.pct, this.time, this.art, this.title);
+  final String pct;
+  final String time;
+  final String art;
+  final String title;
+}
+
+class _OfferCard extends StatelessWidget {
+  const _OfferCard({required this.offer});
+  final _Offer offer;
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 130,
+      padding: const EdgeInsets.all(9),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: LcColors.chipBorder),
       ),
       child: Column(
@@ -330,262 +1046,296 @@ class _StoreScreenState extends State<StoreScreen> {
         children: [
           Row(
             children: [
-              Image.asset(icon, width: 16, height: 16),
-              const SizedBox(width: 5),
-              Flexible(
-                child: Text(title,
-                    style: ZcText.heading(12)
-                        .copyWith(color: LcColors.textDark)),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(offer.pct,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900)),
               ),
+              const Spacer(),
+              const Icon(Icons.schedule_rounded,
+                  size: 10, color: LcColors.textMuted),
+              const SizedBox(width: 2),
+              Text(offer.time,
+                  style: const TextStyle(
+                      color: LcColors.textMuted,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700)),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(desc,
-              style:
-                  ZcText.body(9.5).copyWith(color: LcColors.textMuted),
-              maxLines: 2),
-          const SizedBox(height: 8),
-          Center(child: Image.asset(art, height: 62, fit: BoxFit.contain)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 5,
-            runSpacing: 5,
-            children: [
-              for (final a in amounts)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 9, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: LcColors.bg,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: LcColors.chipBorder),
-                  ),
-                  child: Text(a,
-                      style: const TextStyle(
-                          color: LcColors.textDark,
+          const SizedBox(height: 6),
+          Expanded(
+            child: Center(
+              child: Image.asset(
+                offer.art,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Icon(
+                    Icons.card_giftcard_rounded,
+                    size: 40,
+                    color: LcColors.purple),
+              ),
+            ),
+          ),
+          const SizedBox(height: 5),
+          Center(
+            child: Text(offer.title,
+                style: const TextStyle(
+                    color: LcColors.textDark,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800)),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3EEFA),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const FittedBox(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.lock_rounded,
+                      size: 11, color: LcColors.textMuted),
+                  SizedBox(width: 4),
+                  Text('Price Locked',
+                      style: TextStyle(
+                          color: LcColors.textMuted,
                           fontSize: 10.5,
                           fontWeight: FontWeight.w800)),
-                ),
-            ],
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 8),
-          const _PriceLockedButton(),
         ],
       ),
-    );
-  }
-
-  Widget _specialOffers() {
-    const offers = [
-      ('-30%', '2d 14h', 'assets/art/store_pack_purple.png', 'Cosmic Pack'),
-      ('-25%', '2d 14h', 'assets/art/store_pack_royal.png', 'Royal Set'),
-      ('-20%', '1d 14h', 'assets/art/store_pack_ice.png', 'Ice Collection'),
-      ('-30%', '2d 14h', 'assets/art/store_sticker_bundle.png',
-          'Sticker Bundle'),
-    ];
-    return SizedBox(
-      height: 205,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        children: [
-          for (final o in offers)
-            Container(
-              width: 128,
-              margin: const EdgeInsets.only(right: 9),
-              padding: const EdgeInsets.all(9),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: LcColors.chipBorder),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FittedBox(
-                    child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: ZcColors.errorRed,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(o.$1,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w900)),
-                      ),
-                      const SizedBox(width: 22),
-                      FittedBox(
-                        child: Row(children: [
-                          const Icon(Icons.schedule_rounded,
-                              size: 10, color: LcColors.textMuted),
-                          const SizedBox(width: 2),
-                          Text(o.$2,
-                              style: ZcText.body(8.5)
-                                  .copyWith(color: LcColors.textMuted)),
-                        ]),
-                      ),
-                    ],
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Expanded(
-                    child: Center(
-                      child: Image.asset(
-                        o.$3,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.card_giftcard_rounded,
-                          color: LcColors.purple,
-                          size: 32,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Center(
-                    child: Text(o.$4,
-                        style: ZcText.body(11).copyWith(
-                            color: LcColors.textDark,
-                            fontWeight: FontWeight.w800)),
-                  ),
-                  const SizedBox(height: 6),
-                  const _PriceLockedButton(compact: true),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _popularItems() {
-    const items = [
-      ('Epic', 'assets/art/sp_zero_classic.png', 'Neon Pulse', 'Card Back'),
-      ('Epic', 'assets/art/store_avatar_jester.png', 'Mystic Jester',
-          'Avatar'),
-      ('Legendary', 'assets/art/store_ace_inferno.png', 'Inferno Ace',
-          'Special Card'),
-      ('Epic', 'assets/art/ef_rainbow.png', 'Electric Spark', 'Effect'),
-      ('Rare', 'assets/art/st_gg.png', 'GG Champ', 'Sticker'),
-    ];
-    return SizedBox(
-      height: 205,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        children: [
-          for (final it in items)
-            Container(
-              width: 118,
-              margin: const EdgeInsets.only(right: 9),
-              padding: const EdgeInsets.all(9),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: LcColors.chipBorder),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FittedBox(
-                    child: Row(
-                    children: [
-                      _miniRarity(it.$1),
-                      const SizedBox(width: 20),
-                      const Icon(Icons.favorite_border_rounded,
-                          size: 14, color: LcColors.textMuted),
-                    ],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Expanded(
-                    child: Center(
-                      child: Image.asset(
-                        it.$2,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.style_rounded,
-                          color: LcColors.purple,
-                          size: 32,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(it.$3,
-                      style: ZcText.body(10.5).copyWith(
-                          color: LcColors.textDark,
-                          fontWeight: FontWeight.w800),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                  Text(it.$4,
-                      style: ZcText.body(9)
-                          .copyWith(color: LcColors.textMuted)),
-                  const SizedBox(height: 5),
-                  const _PriceLockedButton(compact: true),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _miniRarity(String label) {
-    final r = switch (label) {
-      'Rare' => _Rarity.rare,
-      'Legendary' => _Rarity.legendary,
-      _ => _Rarity.epic,
-    };
-    final (fg, bg) = rarityColors(r);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-          color: bg, borderRadius: BorderRadius.circular(5)),
-      child: Text(label,
-          style: TextStyle(
-              color: fg, fontSize: 8.5, fontWeight: FontWeight.w800)),
     );
   }
 }
 
-// Alias so this file can reference the rarity enum concisely.
-typedef _Rarity = ZcRarity;
+// =============================================================================
+// TRUST BADGES ROW
+// =============================================================================
 
-class _PriceLockedButton extends StatelessWidget {
-  const _PriceLockedButton({this.compact = false});
-
-  final bool compact;
-
+class _TrustBadgesRow extends StatelessWidget {
+  const _TrustBadgesRow();
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: compact ? 6 : 8),
+      margin: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFEDE7FB),
-        borderRadius: BorderRadius.circular(9),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: LcColors.chipBorder),
       ),
-      child: FittedBox(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.lock_open_rounded,
-                size: 11, color: LcColors.textMuted),
-            const SizedBox(width: 5),
-            Text('Price Locked',
-                style: TextStyle(
-                    color: LcColors.textMuted,
-                    fontSize: compact ? 9.5 : 10.5,
-                    fontWeight: FontWeight.w800)),
-          ],
+      child: const Row(
+        children: [
+          Expanded(
+              child: _TrustItem(
+            icon: Icons.monetization_on_rounded,
+            iconColor: Color(0xFFF59E0B),
+            title: 'More Coins',
+            subtitle: 'Play more matches\n& win big',
+          )),
+          Expanded(
+              child: _TrustItem(
+            icon: Icons.diamond_rounded,
+            iconColor: LcColors.purple,
+            title: 'More Gems',
+            subtitle: 'Unlock themes,\neffects & more',
+          )),
+          Expanded(
+              child: _TrustItem(
+            icon: Icons.shield_rounded,
+            iconColor: Color(0xFF10B981),
+            title: 'Secure Payment',
+            subtitle: '100% secure\ntransactions',
+          )),
+          Expanded(
+              child: _TrustItem(
+            icon: Icons.workspace_premium_rounded,
+            iconColor: Color(0xFFF59E0B),
+            title: 'Best Value',
+            subtitle: 'Extra bonuses on\nevery purchase',
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrustItem extends StatelessWidget {
+  const _TrustItem({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+  });
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: iconColor, size: 22),
+          const SizedBox(height: 6),
+          Text(title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  color: LcColors.textDark,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w900,
+                  height: 1.1)),
+          const SizedBox(height: 3),
+          Text(subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  color: LcColors.textMuted,
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w600,
+                  height: 1.25)),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// FEATURED TILE
+// =============================================================================
+
+class _FeaturedTile extends StatelessWidget {
+  const _FeaturedTile({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          width: (MediaQuery.of(context).size.width - 40) / 2,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: LcColors.chipBorder),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.arrow_forward_rounded,
+                  size: 18, color: LcColors.purple),
+              const SizedBox(width: 10),
+              Text(label,
+                  style: const TextStyle(
+                      color: LcColors.textDark,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13)),
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
+// =============================================================================
+// Sub-category grid configs (mirror the wrappers in collection_grid_screen.dart)
+// =============================================================================
+
+const _kCardBacksConfig = GridScreenConfig(
+  category: 'cardBacks',
+  headerIcon: Icons.style_rounded,
+  headerTitle: 'CARD BACKS',
+  headerSubtitle: 'Collect and equip unique card backs.',
+  heroEyebrow: '',
+  heroTitle: 'Card Backs',
+  heroSubtitle:
+      'Collect and equip unique card backs to express your style in every match.',
+  heroArt: 'assets/art/hero_cardbacks.png',
+  heroRarity: ZcRarity.epic,
+  filters: ['All', 'Owned', 'Favorites', 'Rare', 'Epic', 'Legendary'],
+  stripTitle: 'More stunning designs in the Store!',
+  stripSubtitle: 'New card backs added every week.',
+  artAspect: 0.7,
+);
+
+const _kSpecialCardsConfig = GridScreenConfig(
+  category: 'specialCards',
+  headerIcon: Icons.style_rounded,
+  headerTitle: 'SPECIAL CARDS',
+  headerSubtitle: 'Collect, own and use special cards in your games.',
+  heroEyebrow: 'Your Highlight',
+  heroTitle: 'Cosmic Ace',
+  heroSubtitle: 'A cosmic glow that lights up the table when you play it.',
+  heroArt: 'assets/art/hero_special.png',
+  heroRarity: ZcRarity.epic,
+  heroAction: 'Use in Game',
+  filters: ['All', 'Owned', 'Favorites', 'Epic', 'Legendary'],
+  stripTitle: 'More special cards in the Store!',
+  stripSubtitle: 'Collect unique cards and stand out in every game.',
+  crossAxisCount: 5,
+  artAspect: 0.72,
+  showOwnedBadge: true,
+);
+
+const _kAvatarsConfig = GridScreenConfig(
+  category: 'avatars',
+  headerIcon: Icons.person_rounded,
+  headerTitle: 'AVATARS',
+  headerSubtitle: 'Pick a look that speaks for you.',
+  heroEyebrow: 'Featured',
+  heroTitle: 'Mystic Jester',
+  heroSubtitle: 'A mysterious face for a mysterious mind.',
+  heroArt: 'assets/art/store_avatar_jester.png',
+  heroRarity: ZcRarity.epic,
+  filters: ['All', 'Owned', 'Favorites', 'Rare', 'Epic', 'Legendary'],
+  stripTitle: 'More avatars in the Store!',
+  stripSubtitle: 'Express yourself with fresh looks.',
+);
+
+const _kEffectsConfig = GridScreenConfig(
+  category: 'effects',
+  headerIcon: Icons.auto_awesome_rounded,
+  headerTitle: 'EFFECTS',
+  headerSubtitle: 'Add flair to your table.',
+  heroEyebrow: 'Trending',
+  heroTitle: 'Electric Spark',
+  heroSubtitle: 'A spark of electricity every big move.',
+  heroArt: 'assets/art/ef_rainbow.png',
+  heroRarity: ZcRarity.epic,
+  filters: ['All', 'Owned', 'Favorites', 'Rare', 'Epic', 'Legendary'],
+  stripTitle: 'More effects in the Store!',
+  stripSubtitle: 'Light up your table.',
+);
+
+const _kStickersConfig = GridScreenConfig(
+  category: 'stickers',
+  headerIcon: Icons.emoji_emotions_rounded,
+  headerTitle: 'STICKERS',
+  headerSubtitle: 'Chat with style.',
+  heroEyebrow: 'Fan Favorite',
+  heroTitle: 'GG Champ',
+  heroSubtitle: 'Show your team spirit.',
+  heroArt: 'assets/art/st_gg.png',
+  heroRarity: ZcRarity.rare,
+  filters: ['All', 'Owned', 'Favorites', 'Rare', 'Epic', 'Legendary'],
+  stripTitle: 'More stickers in the Store!',
+  stripSubtitle: 'React with flair.',
+);
