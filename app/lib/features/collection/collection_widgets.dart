@@ -398,7 +398,10 @@ class CollectionGridCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
               color: item.equipped ? LcColors.purple : LcColors.chipBorder,
-              width: item.equipped ? 1.8 : 1),
+              width: item.equipped ? 2.0 : 1),
+          boxShadow: item.equipped
+              ? [BoxShadow(color: LcColors.purple.withValues(alpha: 0.18), blurRadius: 8, spreadRadius: 1)]
+              : null,
         ),
         padding: const EdgeInsets.all(7),
         child: Column(
@@ -406,7 +409,28 @@ class CollectionGridCard extends ConsumerWidget {
           children: [
             Stack(
               children: [
-                ClipRRect(
+                // Avatar uses circular clip; all others use rounded rect.
+                isAvatar
+                    ? AspectRatio(
+                        aspectRatio: 1,
+                        child: LayoutBuilder(
+                          builder: (context, box) => Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: item.equipped
+                                    ? LcColors.purple
+                                    : const Color(0xFFE4DFF2),
+                                width: item.equipped ? 2.5 : 1.5,
+                              ),
+                            ),
+                            child: ClipOval(
+                              child: ZcAvatars.forId(item.asset, box.maxWidth),
+                            ),
+                          ),
+                        ),
+                      )
+                    : ClipRRect(
                   borderRadius: BorderRadius.circular(9),
                   child: AspectRatio(
                     aspectRatio: artAspect,
@@ -417,11 +441,7 @@ class CollectionGridCard extends ConsumerWidget {
                               width: box.maxWidth,
                             ),
                           )
-                        : isAvatar
-                            ? LayoutBuilder(
-                                builder: (context, box) => ZcAvatars.forId(
-                                    item.asset, box.maxWidth),
-                              )
+                        : const SizedBox.shrink()
                             : Image.asset(
                                 item.asset,
                                 fit: BoxFit.cover,
@@ -452,39 +472,59 @@ class CollectionGridCard extends ConsumerWidget {
                               ),
                   ),
                 ),
-                Positioned(
-                  top: 4,
-                  right: 4,
-                  child: GestureDetector(
-                    onTap: () => ctrl.toggleFavorite(category, item.id),
-                    child: item.equipped
-                        ? const CircleAvatar(
-                            radius: 10,
-                            backgroundColor: LcColors.purple,
-                            child: Icon(Icons.check_rounded,
-                                color: Colors.white, size: 13),
-                          )
-                        : item.owned
-                            ? Icon(
+                // Top-right badge: checkmark if equipped, heart if owned, lock if not owned
+                if (!item.equipped)
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: GestureDetector(
+                      onTap: () => ctrl.toggleFavorite(category, item.id),
+                      child: item.owned
+                          ? Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                color: const Color(0x99000000),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
                                 item.favorite
                                     ? Icons.favorite_rounded
                                     : Icons.favorite_border_rounded,
                                 color: item.favorite
-                                    ? LcColors.purple
+                                    ? Colors.pink
                                     : Colors.white,
-                                size: 16,
-                                shadows: const [
-                                  Shadow(color: Colors.black45, blurRadius: 4)
-                                ],
-                              )
-                            : const CircleAvatar(
-                                radius: 10,
-                                backgroundColor: Color(0x99000000),
-                                child: Icon(Icons.lock_rounded,
-                                    color: Colors.white, size: 11),
+                                size: 13,
                               ),
+                            )
+                          : Container(
+                              width: 22,
+                              height: 22,
+                              decoration: const BoxDecoration(
+                                color: Color(0x99000000),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.lock_rounded,
+                                  color: Colors.white, size: 13),
+                            ),
+                    ),
                   ),
-                ),
+                // Checkmark in top-left corner for equipped item (like mockup)
+                if (item.equipped)
+                  Positioned(
+                    top: 4,
+                    left: 4,
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: const BoxDecoration(
+                        color: LcColors.purple,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.check_rounded,
+                          color: Colors.white, size: 13),
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 6),
@@ -512,23 +552,51 @@ class CollectionGridCard extends ConsumerWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
             const SizedBox(height: 4),
-            if (!item.owned && item.price != null)
+            if (item.equipped)
+              // Green Equipped chip — matches mockup
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: const Color(0xFF10B981),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(
-                  item.price == 0
-                      ? 'FREE'
-                      : '${(item.price! / 100).round()} coins',
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle_rounded,
+                        color: Colors.white, size: 10),
+                    SizedBox(width: 3),
+                    Text('Equipped',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900)),
+                  ],
                 ),
+              )
+            else if (!item.owned && item.price != null)
+              // Price pill with coin icon — matches mockup
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset('assets/art/coin.png',
+                      width: 12,
+                      height: 12,
+                      errorBuilder: (_, __, ___) => const Icon(
+                          Icons.monetization_on_rounded,
+                          size: 12,
+                          color: Color(0xFFF59E0B))),
+                  const SizedBox(width: 3),
+                  Text(
+                    item.price == 0
+                        ? 'FREE'
+                        : '${(item.price! / 100).round()}',
+                    style: const TextStyle(
+                        color: LcColors.textDark,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900),
+                  ),
+                ],
               )
             else
               RarityChip(rarity: item.rarity),

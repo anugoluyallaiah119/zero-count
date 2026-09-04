@@ -329,7 +329,9 @@ class _CollectionGridScreenState
                 if (c.heroEyebrow.isNotEmpty) ...[
                   Text(c.heroEyebrow,
                       style: ZcText.body(10).copyWith(
-                          color: LcColors.purple, fontWeight: FontWeight.w900)),
+                          color: LcColors.purple,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5)),
                   const SizedBox(height: 4),
                 ],
                 Row(
