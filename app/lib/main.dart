@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app/router.dart';
 import 'app/theme.dart';
 import 'shared/analytics/analytics_service.dart';
+import 'shared/monetization/ad_reward_service.dart';
+import 'shared/monetization/iap_service.dart';
 import 'shared/push/notification_settings_screen.dart';
 import 'shared/push/push_notification_service.dart';
 
@@ -40,6 +42,13 @@ class ZeroCountApp extends ConsumerWidget {
     final push = ref.watch(pushNotificationServiceProvider);
     Future.microtask(() async {
       try { await push.init(); } catch (_) {}
+    });
+    // Init AdMob + IAP — best-effort, no crash if SDK unavailable.
+    final ads = ref.watch(adRewardServiceProvider);
+    final iap = ref.watch(iapServiceProvider);
+    Future.microtask(() async {
+      try { await ads.init(); } catch (_) {}
+      try { await iap.init(); } catch (_) {}
     });
     return ZcNotifBannerOverlay(
       child: MaterialApp.router(

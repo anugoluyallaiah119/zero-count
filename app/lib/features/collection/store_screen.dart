@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../shared/monetization/ad_reward_service.dart';
+import '../../shared/monetization/iap_service.dart';
 import '../../ui/zc_bottom_nav.dart';
 import '../../ui/zc_theme.dart';
 import '../player/profile_repository.dart';
@@ -145,6 +147,12 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             child: _PowerYourGameBanner(),
           ),
           const _SectionTitle('Coins & Gems'),
+          // Watch & Earn card.
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 14),
+            child: _WatchAndEarnCard(),
+          ),
+          const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Row(
@@ -161,10 +169,10 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                         'Use coins to unlock items,\njoin events and more.',
                     quantities: const ['1,000', '5,000', '10,000', '25,000'],
                     packages: const [
-                      _Pkg('10,000', '₹89', null),
-                      _Pkg('25,000', '₹199', '10%'),
-                      _Pkg('60,000', '₹449', '20%'),
-                      _Pkg('150,000', '₹999', '30%'),
+                      _Pkg('10,000', '₹89', null, 'zc_coins_10000'),
+                      _Pkg('25,000', '₹199', '10%', 'zc_coins_25000'),
+                      _Pkg('60,000', '₹449', '20%', 'zc_coins_25000'),
+                      _Pkg('150,000', '₹999', '30%', 'zc_coins_25000'),
                     ],
                     selectedQty: _selectedCoin,
                     selectedPkg: _selectedCoinPack,
@@ -184,10 +192,10 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                         'Use gems for premium\nitems and exclusive\ncollections.',
                     quantities: const ['60', '250', '520', '1,100'],
                     packages: const [
-                      _Pkg('60', '₹89', null),
-                      _Pkg('250', '₹199', '10%'),
-                      _Pkg('520', '₹449', '20%'),
-                      _Pkg('1,100', '₹999', '30%'),
+                      _Pkg('60', '₹89', null, 'zc_gems_60'),
+                      _Pkg('250', '₹199', '10%', 'zc_gems_250'),
+                      _Pkg('520', '₹449', '20%', 'zc_gems_520'),
+                      _Pkg('1,100', '₹999', '30%', 'zc_gems_1100'),
                     ],
                     selectedQty: _selectedGem,
                     selectedPkg: _selectedGemPack,
@@ -719,10 +727,11 @@ class _SectionTitle extends StatelessWidget {
 // =============================================================================
 
 class _Pkg {
-  const _Pkg(this.qty, this.price, this.extra);
+  const _Pkg(this.qty, this.price, this.extra, this.iapId);
   final String qty;
   final String price;
   final String? extra;
+  final String iapId; // IAP product id
 }
 
 class _CurrencyPanel extends StatelessWidget {
@@ -937,21 +946,9 @@ class _PackageRow extends StatelessWidget {
                   ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981),
-                  borderRadius: BorderRadius.circular(7),
-                ),
-                child: Text(
-                  pkg.price,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
+              IapBuyButton(
+                productId: pkg.iapId,
+                fallbackPrice: pkg.price,
               ),
               if (pkg.extra != null) ...[
                 const SizedBox(width: 4),
@@ -1339,3 +1336,233 @@ const _kStickersConfig = GridScreenConfig(
   stripTitle: 'More stickers in the Store!',
   stripSubtitle: 'React with flair.',
 );
+
+// =============================================================================
+// WATCH & EARN CARD
+// =============================================================================
+
+class _WatchAndEarnCard extends ConsumerStatefulWidget {
+  const _WatchAndEarnCard();
+
+  @override
+  ConsumerState<_WatchAndEarnCard> createState() => _WatchAndEarnCardState();
+}
+
+class _WatchAndEarnCardState extends ConsumerState<_WatchAndEarnCard> {
+  bool _watching = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusAsync = ref.watch(adStatusProvider);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A0B3D), Color(0xFF2A0E5C)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+            color: const Color(0x66A855F7), width: 1.2),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: const Color(0x22FFFFFF),
+              shape: BoxShape.circle,
+              border: Border.all(
+                  color: const Color(0x44FDE047)),
+            ),
+            child: const Icon(Icons.play_circle_filled_rounded,
+                color: Color(0xFFFDE047), size: 30),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Watch & Earn',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                statusAsync.when(
+                  loading: () => const Text('Loading…',
+                      style: TextStyle(
+                          color: Colors.white54, fontSize: 11)),
+                  error: (_, __) => const Text(
+                      'Tap to earn 50 coins',
+                      style: TextStyle(
+                          color: Colors.white54, fontSize: 11)),
+                  data: (s) => Text(
+                    s.canWatch
+                        ? '+50 coins  •  ${s.remaining}/${s.dailyCap} remaining today'
+                        : 'Come back tomorrow — ${s.dailyCap} ads/day',
+                    style: TextStyle(
+                      color: s.canWatch
+                          ? const Color(0xFFFDE047)
+                          : Colors.white38,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          statusAsync.when(
+            loading: () => const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (s) => ElevatedButton(
+              onPressed: (!s.canWatch || _watching)
+                  ? null
+                  : () => _watch(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFDE047),
+                disabledBackgroundColor: const Color(0x33FFFFFF),
+                foregroundColor: const Color(0xFF1A0B3D),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 8),
+              ),
+              child: _watching
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFF1A0B3D)))
+                  : Text(
+                      s.canWatch ? 'WATCH' : 'DONE',
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _watch(BuildContext context) async {
+    setState(() => _watching = true);
+    try {
+      final result =
+          await ref.read(adRewardServiceProvider).watchAndEarn();
+      if (!mounted) return;
+      if (result != null) {
+        ref.invalidate(adStatusProvider);
+        ref.invalidate(profileProvider);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              '+${result.coins} coins! Balance: ${result.balance}'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFF22C55E),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12)),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _watching = false);
+    }
+  }
+}
+
+// =============================================================================
+// IAP BUY BUTTON — replaces the _PackageRow price pill with real purchase
+// =============================================================================
+
+class IapBuyButton extends ConsumerStatefulWidget {
+  const IapBuyButton({super.key, required this.productId, required this.fallbackPrice});
+  final String productId;
+  final String fallbackPrice;
+
+  @override
+  ConsumerState<IapBuyButton> createState() => _IapBuyButtonState();
+}
+
+class _IapBuyButtonState extends ConsumerState<IapBuyButton> {
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen for purchase results targeting this product.
+    final iap = ref.read(iapServiceProvider);
+    iap.results.listen((r) {
+      if (!mounted) return;
+      if (r.state == IapPurchaseState.purchasing) {
+        setState(() => _loading = true);
+        return;
+      }
+      setState(() => _loading = false);
+      if (r.state == IapPurchaseState.success) {
+        ref.invalidate(profileProvider);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(r.coins != null
+              ? '+${r.coins} coins!'
+              : '+${r.gems} gems!'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFF22C55E),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12)),
+        ));
+      } else if (r.state == IapPurchaseState.error ||
+          r.state == IapPurchaseState.unavailable) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(r.message ?? 'Purchase failed'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: ZcColors.errorRed,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12)),
+        ));
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final iap = ref.watch(iapServiceProvider);
+    final product = iap.products[widget.productId];
+    final priceLabel = product?.price ?? widget.fallbackPrice;
+
+    return GestureDetector(
+      onTap: _loading ? null : () => iap.buy(widget.productId),
+      child: Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: _loading
+              ? const Color(0x22FFFFFF)
+              : const Color(0xFF10B981),
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: _loading
+            ? const SizedBox(
+                width: 28,
+                height: 14,
+                child: CircularProgressIndicator(
+                    strokeWidth: 1.5, color: Colors.white))
+            : Text(
+                priceLabel,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+      ),
+    );
+  }
+}

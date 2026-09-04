@@ -14,21 +14,24 @@ import org.springframework.web.bind.annotation.RestController;
 import com.zerocount.server.player.AuthInterceptor;
 
 /**
- * N1.2 — rewarded-ad grant endpoint (server half; the family-safe ad SDK
- * wiring is client-side). The client watches an ad, the ad network confirms
- * via its SDK, and the client claims here with a one-time nonce:
+ * N1.2 — rewarded-ad grant endpoint.
+ *
+ * Policy: +50 coins per completed ad, max 2 grants per user per UTC day
+ * (= 100 coins/day max via ads). The client watches a rewarded ad, the ad
+ * network SDK confirms completion, and the client claims here with a
+ * one-time nonce.
  *
  *   POST /api/wallet/ad-reward {"nonce":"uuid-from-client"}
+ *   GET  /api/wallet/ad-status → {"adsWatchedToday":N,"dailyCap":2,"remaining":N}
  *
- * Policy: +25 coins per completed ad, max 5 grants per user per UTC day.
- * Idempotent on the nonce (ref = "ad:{user}:{nonce}") — replays don't pay.
+ * Idempotent on nonce (ref = "ad:{user}:{nonce}") — replays don't pay.
  */
 @RestController
 @RequestMapping("/api/wallet")
 public class AdRewardController {
 
-    static final int REWARD_COINS = 25;
-    static final int DAILY_CAP = 5;
+    static final int REWARD_COINS = 50;   // 50 coins per completed ad
+    static final int DAILY_CAP = 2;        // 2 ads per day = 100 coins max
 
     private final JdbcTemplate db;
     private final WalletService wallet;
@@ -66,6 +69,21 @@ public class AdRewardController {
         }
         var bal = wallet.creditCoins(userId, REWARD_COINS, WalletTxType.AD_REWARD, ref);
         return Map.of("granted", true, "coins", REWARD_COINS, "balance", bal.coins());
+    }
+
+    @org.springframework.web.bind.annotation.GetMapping("/ad-status")
+    public Map<String, Object> adStatus(HttpServletRequest req) {
+        UUID userId = AuthInterceptor.currentUserId(req);
+        Integer watched = db.queryForObject(
+            "SELECT COUNT(*) FROM transactions WHERE user_id = ? "
+                + "AND type = 'ad_reward' AND ts > now() - interval '1 day'",
+            Integer.class, userId);
+        int w = watched == null ? 0 : watched;
+        return Map.of(
+            "adsWatchedToday", w,
+            "dailyCap", DAILY_CAP,
+            "remaining", Math.max(0, DAILY_CAP - w),
+            "coinsPerAd", REWARD_COINS);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
