@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../../ui/zc_card_backs.dart';
+import 'play_area_theme_layer.dart';
 import '../../ui/zc_cosmetics.dart';
 import '../../ui/zc_playing_card.dart';
 import 'play_area_theme.dart';
@@ -516,69 +517,8 @@ class _PlayAreaTableState extends State<PlayAreaTable>
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 1. Deep cosmic foundation gradient
-        Positioned.fill(
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF0C0420),
-                  Color(0xFF19093E),
-                  Color(0xFF130630),
-                  Color(0xFF0B031A),
-                ],
-                stops: [0.0, 0.4, 0.75, 1.0],
-              ),
-            ),
-          ),
-        ),
-
-        // 2. Full-screen backdrop art (Mystic Garden Scene)
-        Positioned.fill(
-          child: Image.asset(
-            widget.theme.backgroundAsset,
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-            errorBuilder: (_, __, ___) => const SizedBox(),
-          ),
-        ),
-
-        // 3. Ambient atmospheric lighting glow
-        Positioned.fill(
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: RadialGradient(
-                center: Alignment(0.0, -0.10),
-                radius: 0.95,
-                colors: [
-                  Color(0x308B5CF6),
-                  Color(0x103B0764),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-          ),
-        ),
-
-        // Japan theme: left scroll panel "雅 / ZERO COUNT" + right bamboo panel
-        if (widget.theme.showSidePanels) ...[
-          Positioned(
-            left: 0,
-            top: 60,
-            bottom: 120,
-            width: 52,
-            child: _buildJapanLeftPanel(),
-          ),
-          Positioned(
-            right: 0,
-            top: 60,
-            bottom: 120,
-            width: 52,
-            child: _buildJapanRightPanel(),
-          ),
-        ],
+        // Theme background: image + ambient glow + side panels (Japan/etc.)
+        Positioned.fill(child: PlayAreaBackground(theme: widget.theme)),
 
         SafeArea(
           child: Column(
@@ -993,128 +933,6 @@ class _PlayAreaTableState extends State<PlayAreaTable>
   // 3. 3D Game Table Felt + Center Piles + Active Player Ambient Glow Sweep (Req 4)
   // -------------------------------------------------------------------------
 
-  // -------------------------------------------------------------------------
-  // Japan Side Panels (left scroll + right bamboo/lantern)
-  // -------------------------------------------------------------------------
-
-  Widget _buildJapanLeftPanel() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xCC1A0800),
-        borderRadius: const BorderRadius.horizontal(right: Radius.circular(10)),
-        border: Border.all(color: const Color(0x44E8A4B8), width: 0.8),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Scroll-style top divider
-          Container(height: 1, color: const Color(0x88E8A4B8)),
-          const SizedBox(height: 12),
-          // 雅 kanji (elegance)
-          const Text(
-            '雅',
-            style: TextStyle(
-              fontFamily: 'Nunito',
-              fontSize: 26,
-              color: Color(0xFFE8A4B8),
-              fontWeight: FontWeight.w900,
-              height: 1.0,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(width: 24, height: 1, color: const Color(0x66E8A4B8)),
-          const SizedBox(height: 10),
-          // ZERO COUNT vertical text
-          ...['Z','E','R','O','','C','O','U','N','T'].map(
-            (c) => Text(
-              c,
-              style: const TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 8,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.5,
-                color: Color(0xCCFFD4E8),
-                height: 1.5,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(height: 1, color: const Color(0x88E8A4B8)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildJapanRightPanel() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xCC1A0800),
-        borderRadius: const BorderRadius.horizontal(left: Radius.circular(10)),
-        border: Border.all(color: const Color(0x44E8A4B8), width: 0.8),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(height: 1, color: const Color(0x88E8A4B8)),
-          const SizedBox(height: 12),
-          // 和 kanji (harmony) in lantern style
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xAACC2200),
-              border: Border.all(color: const Color(0x88FF6B9D), width: 1),
-            ),
-            alignment: Alignment.center,
-            child: const Text(
-              '和',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-                height: 1.0,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(width: 24, height: 1, color: const Color(0x66E8A4B8)),
-          const SizedBox(height: 10),
-          // 一手で変わる vertical text (means "One hand changes everything")
-          ...['一','手','で','変','わ','る'].map(
-            (c) => Text(
-              c,
-              style: const TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w900,
-                color: Color(0xCCFFD4E8),
-                height: 1.6,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(width: 24, height: 1, color: const Color(0x44E8A4B8)),
-          const SizedBox(height: 8),
-          // PLAY CALM PLAY SMART vertical
-          ...['P','L','A','Y',' ','C','A','L','M'].map(
-            (c) => Text(
-              c,
-              style: const TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 6.5,
-                fontWeight: FontWeight.w900,
-                color: Color(0x99FFD4E8),
-                height: 1.5,
-                letterSpacing: 0.3,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(height: 1, color: const Color(0x88E8A4B8)),
-        ],
-      ),
-    );
-  }
 
   Widget _buildTableFeltAndPiles() {
     return LayoutBuilder(builder: (context, constraints) {
@@ -1148,215 +966,34 @@ class _PlayAreaTableState extends State<PlayAreaTable>
             glowAlignment = Alignment(cos(angle) * 0.4, 0.9); // You (Bottom)
           }
 
-          final hasTableAsset = widget.theme.tableAsset != null;
-
           return Center(
             child: SizedBox(
               key: const Key('feltTable'),
               width: tableWidth,
               height: tableHeight,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // 3D Stadium Table Asset with Transparent Alpha
-                  if (hasTableAsset)
-                    Positioned.fill(
-                      child: Image.asset(
-                        widget.theme.tableAsset!,
-                        fit: BoxFit.fill,
-                        errorBuilder: (_, __, ___) => _buildFallbackFelt(),
-                      ),
-                    )
-                  else
-                    Positioned.fill(
-                      child: _buildFallbackFelt(),
+              child: PlayAreaTableFelt(
+                theme: widget.theme,
+                glowAlignment: glowAlignment,
+                isMyTurn: widget.isMyTurn,
+                onHint: widget.onHint,
+                onGroup: widget.onGroup,
+                centerContent: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildDrawDeck(),
+                        const SizedBox(width: 32),
+                        _buildDiscardPile(),
+                      ],
                     ),
-
-                  // Traveling subtle neon glow light along border
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(36),
-                        gradient: RadialGradient(
-                          center: glowAlignment,
-                          radius: 0.85,
-                          colors: [
-                            widget.theme.borderGlow.withValues(alpha: 0.25),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Optional Side Floating Controls (Brazil Carnival: HINT 3, GROUP)
-                  if (widget.theme.showHintGroup) ...[
-                    // Floating Hint & Group Dock
-                    Positioned(
-                      right: 10,
-                      top: 120,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // HINT button with badge count
-                          GestureDetector(
-                            onTap: () => widget.onHint?.call(),
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                Container(
-                                  width: 52,
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xEE0D4A2B),
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(color: const Color(0xFF22C55E), width: 1.5),
-                                    boxShadow: const [BoxShadow(color: Color(0x4422C55E), blurRadius: 10)],
-                                  ),
-                                  child: const Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.lightbulb_rounded, color: Color(0xFFFDE047), size: 20),
-                                      SizedBox(height: 3),
-                                      Text(
-                                        'HINT',
-                                        style: TextStyle(
-                                          fontFamily: 'Nunito',
-                                          fontSize: 9.5,
-                                          fontWeight: FontWeight.w900,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                // Badge — "3" count like mockup
-                                Positioned(
-                                  top: -5,
-                                  right: -5,
-                                  child: Container(
-                                    width: 18,
-                                    height: 18,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF22C55E),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: const Text(
-                                      '3',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w900,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          // GROUP button
-                          GestureDetector(
-                            onTap: () => widget.onGroup?.call(),
-                            child: Container(
-                              width: 52,
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xEE0D4A2B),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: const Color(0xFF22C55E), width: 1.5),
-                                boxShadow: const [BoxShadow(color: Color(0x4422C55E), blurRadius: 10)],
-                              ),
-                              child: const Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.style_rounded, color: Colors.white, size: 20),
-                                  SizedBox(height: 3),
-                                  Text(
-                                    'GROUP',
-                                    style: TextStyle(
-                                      fontFamily: 'Nunito',
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Top-right YOUR TURN green hexagon status pill
-                    if (widget.isMyTurn)
-                      Positioned(
-                        right: 20,
-                        top: 24,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xEE093B1F),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF22C55E), width: 1.2),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x4422C55E),
-                                blurRadius: 10,
-                              ),
-                            ],
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'YOUR TURN',
-                                style: TextStyle(
-                                  fontFamily: 'Nunito',
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.6,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              SizedBox(width: 4),
-                              Icon(Icons.hexagon_rounded, color: Color(0xFF22C55E), size: 12),
-                            ],
-                          ),
-                        ),
-                      ),
+                    const SizedBox(height: 18),
+                    _buildTurnBanner(),
+                    const SizedBox(height: 12),
                   ],
-
-                  // Japan theme: Enso circle + 零 kanji painted on tatami
-                  if (widget.theme.showSidePanels)
-                    Center(
-                      child: CustomPaint(
-                        size: const Size(180, 180),
-                        painter: _EnsoPainter(),
-                      ),
-                    ),
-
-                  // Center Piles & Turn Banner
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildDrawDeck(),
-                          const SizedBox(width: 32),
-                          _buildDiscardPile(),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-                      _buildTurnBanner(),
-                      const SizedBox(height: 12),
-                    ],
-                  ),
-                ],
+                ),
               ),
             ),
           );
@@ -1365,22 +1002,11 @@ class _PlayAreaTableState extends State<PlayAreaTable>
     });
   }
 
-  Widget _buildFallbackFelt() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: widget.theme.tableGradient,
-        ),
-        borderRadius: BorderRadius.circular(36),
-        border: Border.all(
-          color: widget.theme.borderColor,
-          width: 4.5,
-        ),
-      ),
-    );
+  // ── removed: inline theme-visual code moved to PlayAreaTableFelt ─────────
+      );
+    });
   }
+
 
   Widget _buildDrawDeck() {
     final canDraw = widget.isMyTurn && widget.canDraw && !_isDealing;
@@ -3014,66 +2640,3 @@ class _SpecialHintPill extends StatelessWidget {
 }
 
 /// Ink-brush Enso circle + 零 kanji painted on the Japan tatami table.
-class _EnsoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final r = size.width * 0.44;
-
-    // Ink-brush enso circle — thick, slightly uneven opacity
-    final paint = Paint()
-      ..color = const Color(0x552D1A00)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 14
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawArc(
-      Rect.fromCircle(center: Offset(cx, cy), radius: r),
-      -pi * 0.7,
-      pi * 1.85,
-      false,
-      paint,
-    );
-
-    // Inner faint circle for depth
-    paint
-      ..color = const Color(0x22E8A4B8)
-      ..strokeWidth = 2;
-    canvas.drawCircle(Offset(cx, cy), r * 0.72, paint);
-
-    // 零 kanji in center (drawn as text)
-    final tp = TextPainter(
-      text: const TextSpan(
-        text: '零',
-        style: TextStyle(
-          fontSize: 38,
-          color: Color(0x66C8787E),
-          fontWeight: FontWeight.w900,
-          height: 1.0,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(canvas, Offset(cx - tp.width / 2, cy - tp.height / 2 - 2));
-
-    // ZERO COUNT label below kanji
-    final sub = TextPainter(
-      text: const TextSpan(
-        text: 'ZERO COUNT',
-        style: TextStyle(
-          fontSize: 8,
-          color: Color(0x55C8787E),
-          fontWeight: FontWeight.w900,
-          letterSpacing: 2.5,
-          height: 1.0,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    sub.paint(canvas, Offset(cx - sub.width / 2, cy + 24));
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
