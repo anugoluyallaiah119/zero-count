@@ -503,8 +503,8 @@ class ZcCardFan extends StatelessWidget {
       }
     }
 
-    // 2-row layout for 13-card games (or large hands) so all cards fit without scrolling
-    if (items.length > 7) {
+    // 2-row layout only for 13-card games (or large hands > 10 cards)
+    if (items.length > 10) {
       final mid = (items.length + 1) ~/ 2;
       final row1 = items.sublist(0, mid);
       final row2 = items.sublist(mid);
@@ -531,7 +531,7 @@ class ZcCardFan extends StatelessWidget {
       );
     }
 
-    // Single centered row for 7-card games (or smaller hands)
+    // Single centered row for standard games (7 and 8 cards)
     return Padding(
       padding: const EdgeInsets.only(top: 18, bottom: 3),
       child: SingleChildScrollView(

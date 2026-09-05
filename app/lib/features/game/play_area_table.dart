@@ -2150,8 +2150,8 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                 child: ZcCardFan(
                   key: const Key('playerHand'),
                   cards: cardList,
-                  cardWidth: widget.hand.length > 7 ? 43 : 52,
-                  overlap: widget.hand.length > 7 ? 0.52 : 0.62,
+                  cardWidth: widget.hand.length > 8 ? 42 : 48,
+                  overlap: widget.hand.length > 8 ? 0.52 : 0.62,
                   enableGrouping: widget.grouping,
                   selectedCardId: widget.selectedCardId,
                   onCardTap: (id) {
