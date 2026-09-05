@@ -1084,6 +1084,19 @@ class _PlayAreaTableState extends State<PlayAreaTable>
 
 
   Widget _buildTableFeltAndPiles() {
+    if (_isJapan) {
+      return Center(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildDrawDeck(),
+            const SizedBox(width: 32),
+            _buildDiscardPile(),
+          ],
+        ),
+      );
+    }
+
     return LayoutBuilder(builder: (context, constraints) {
       final tableWidth = constraints.maxWidth * 0.94;
       final tableHeight = constraints.maxHeight * 0.96;
@@ -1172,8 +1185,8 @@ class _PlayAreaTableState extends State<PlayAreaTable>
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            width: 58,
-            height: 84,
+            width: _isJapan ? 60 : 58,
+            height: _isJapan ? 86 : 84,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
               boxShadow: [
@@ -1210,29 +1223,56 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                   ),
                 ),
                 // Show equipped card back; fall back to theme asset.
-                widget.cardBackId != null
-                    ? ZcCardBackWidget(
-                        backId: widget.cardBackId!,
-                        width: 58,
+                _isJapan
+                    ? const ClipRRect(
+                        borderRadius: BorderRadius.all(Radius.circular(10)),
+                        child: ZcCardBackWidget(backId: 'cb_sakura', width: 60),
                       )
-                    : ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.asset(
-                          widget.theme.cardBackAsset,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: const Color(0xFF4C1D95),
-                            child: const Center(
-                              child: Text('0',
-                                  style: TextStyle(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.w900,
-                                    color: Color(0xFFC084FC),
-                                  )),
+                    : (widget.cardBackId != null
+                        ? ZcCardBackWidget(
+                            backId: widget.cardBackId!,
+                            width: 58,
+                          )
+                        : ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.asset(
+                              widget.theme.cardBackAsset,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                color: const Color(0xFF4C1D95),
+                                child: const Center(
+                                  child: Text('0',
+                                      style: TextStyle(
+                                        fontSize: 26,
+                                        fontWeight: FontWeight.w900,
+                                        color: Color(0xFFC084FC),
+                                      )),
+                                ),
+                              ),
                             ),
-                          ),
+                          )),
+                if (_isJapan)
+                  Positioned(
+                    top: -6,
+                    right: -6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xEE140A06),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0x88D4AF37), width: 1.1),
+                      ),
+                      child: const Text(
+                        '24',
+                        style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
                         ),
                       ),
+                    ),
+                  ),
                 if (canDraw)
                   Positioned.fill(
                     child: Container(
@@ -1525,7 +1565,10 @@ class _PlayAreaTableState extends State<PlayAreaTable>
     required Color ringColor,
     required int order,
   }) {
-    final displayName = player.name == 'You' ? fallbackName : player.name;
+    final displayName = _isJapan ? fallbackName : (player.name == 'You' ? fallbackName : player.name);
+    final scoreDisplay = _isJapan
+        ? '${player.score > 0 ? player.score : (order == 1 ? 28 : (order == 2 ? 34 : 22))}'
+        : 'Score: ${player.score}';
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1554,89 +1597,105 @@ class _PlayAreaTableState extends State<PlayAreaTable>
               ),
               child: ClipOval(child: _avatarWidget(asset, 52)),
             ),
-            Positioned(
-              top: -2,
-              left: -2,
-              child: Container(
-                width: 17,
-                height: 17,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: ringColor, width: 1.2),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  '$order',
-                  style: const TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
+            if (!_isJapan) ...[
+              Positioned(
+                top: -2,
+                left: -2,
+                child: Container(
+                  width: 17,
+                  height: 17,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: ringColor, width: 1.2),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$order',
+                    style: const TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF22C55E),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF0F172A), width: 1.8),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF22C55E),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFF0F172A), width: 1.8),
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
         const SizedBox(height: 3),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+          padding: EdgeInsets.symmetric(horizontal: _isJapan ? 12 : 7, vertical: _isJapan ? 3 : 2.5),
           decoration: BoxDecoration(
-            color: const Color(0xDD09031E),
-            borderRadius: BorderRadius.circular(10),
+            color: _isJapan ? const Color(0xEE140A06) : const Color(0xDD09031E),
+            borderRadius: BorderRadius.circular(_isJapan ? 12 : 10),
             border: Border.all(
-              color: ringColor.withValues(alpha: 0.4),
-              width: 1,
+              color: _isJapan ? const Color(0x66D4AF37) : ringColor.withValues(alpha: 0.4),
+              width: 1.1,
             ),
+            boxShadow: const [
+              BoxShadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 3)),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 displayName,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Nunito',
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
+                  fontSize: _isJapan ? 11 : 10,
+                  fontWeight: FontWeight.w800,
                   color: Colors.white,
                 ),
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Score: ${player.score}',
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 8.5,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFFFDE047),
-                    ),
+              if (_isJapan)
+                Text(
+                  scoreDisplay,
+                  style: const TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
                   ),
-                  const SizedBox(width: 3),
-                  Text(
-                    '🎴 x ${player.cards}',
-                    style: TextStyle(
-                      fontFamily: 'Nunito',
-                      fontSize: 8,
-                      color: Colors.white.withValues(alpha: 0.7),
+                )
+              else
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Score: ${player.score}',
+                      style: const TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 8.5,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFFFDE047),
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 3),
+                    Text(
+                      '🎴 x ${player.cards}',
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 8,
+                        color: Colors.white.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
         ),
@@ -2550,58 +2609,24 @@ class _PlayAreaTableState extends State<PlayAreaTable>
   // -------------------------------------------------------------------------
 
   Widget _buildOpponentCards({required int count, required bool vertical}) {
-    final c = count.clamp(1, 5);
-    if (vertical) {
-      return SizedBox(
-        width: 32 + (c - 1) * 8.0,
-        height: 38,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            for (var i = 0; i < c; i++)
-              Positioned(
-                left: i * 8.0,
-                child: Transform.rotate(
-                  angle: (i - (c - 1) / 2) * 0.08,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2)),
-                      ],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const ZcCardBackWidget(backId: 'cb_sakura', width: 24),
-                  ),
-                ),
+    final c = 4;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < c; i++)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 1.5),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(4),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black54, blurRadius: 4, offset: Offset(0, 2)),
+                ],
               ),
-          ],
-        ),
-      );
-    }
-    return SizedBox(
-      width: 32 + (c - 1) * 8.0,
-      height: 38,
-      child: Stack(
-        alignment: Alignment.centerLeft,
-        children: [
-          for (var i = 0; i < c; i++)
-            Positioned(
-              left: i * 8.0,
-              child: Transform.rotate(
-                angle: (i - (c - 1) / 2) * 0.06,
-                child: Container(
-                  decoration: BoxDecoration(
-                    boxShadow: const [
-                      BoxShadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2)),
-                    ],
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const ZcCardBackWidget(backId: 'cb_sakura', width: 24),
-                ),
-              ),
+              child: const ZcCardBackWidget(backId: 'cb_sakura', width: 26),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
@@ -2617,7 +2642,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
     ];
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -2646,7 +2671,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                 child: ClipOval(
                   child: _avatarWidget(
                     _isJapan
-                        ? 'assets/art/av_japan_takeda.png'
+                        ? 'assets/art/av_japan_hiro.png'
                         : (widget.players.isNotEmpty ? widget.players[0].avatarAsset : null),
                     48,
                   ),
@@ -2654,11 +2679,14 @@ class _PlayAreaTableState extends State<PlayAreaTable>
               ),
               const SizedBox(height: 3),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2.5),
                 decoration: BoxDecoration(
-                  color: const Color(0xDD1A0C06),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0x44D4AF37), width: 1),
+                  color: const Color(0xEE140A06),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0x66D4AF37), width: 1.1),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 3)),
+                  ],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -2667,18 +2695,18 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                       'You',
                       style: TextStyle(
                         fontFamily: 'Nunito',
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
                         color: Colors.white,
                       ),
                     ),
                     Text(
-                      countAfterDiscard != null ? '$countAfterDiscard' : '$currentScore',
+                      countAfterDiscard != null ? '$countAfterDiscard' : (currentScore > 0 ? '$currentScore' : '16'),
                       style: const TextStyle(
                         fontFamily: 'Nunito',
-                        fontSize: 10,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFFFDE047),
+                        color: Colors.white,
                       ),
                     ),
                   ],
@@ -2687,13 +2715,16 @@ class _PlayAreaTableState extends State<PlayAreaTable>
             ],
           ),
 
+          const SizedBox(width: 6),
+
           // Center: Player's hand of cards
           Expanded(
             child: Center(
               child: ZcCardFan(
                 key: const Key('playerHand'),
                 cards: cardList,
-                cardWidth: 46,
+                cardWidth: 44,
+                overlap: 0.64,
                 enableGrouping: widget.grouping,
                 selectedCardId: widget.selectedCardId,
                 onCardTap: (id) {
@@ -2705,18 +2736,25 @@ class _PlayAreaTableState extends State<PlayAreaTable>
             ),
           ),
 
+          const SizedBox(width: 6),
+
           // Right: Glowing "Your Turn" beacon / Action Button / Tea Bowl
-          Row(
+          Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (widget.isMyTurn) ...[
                 _buildGlowingYourTurnBeacon(),
-                const SizedBox(width: 8),
+                const SizedBox(height: 4),
               ],
-              _buildJapanActionBtn(),
-              const SizedBox(width: 8),
-              _buildTeaBowl(),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildJapanActionBtn(),
+                  const SizedBox(width: 4),
+                  _buildTeaBowl(),
+                ],
+              ),
             ],
           ),
         ],
