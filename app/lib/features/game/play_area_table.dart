@@ -149,7 +149,8 @@ class PlayAreaTable extends StatefulWidget {
   final VoidCallback? onHint;
   final VoidCallback? onGroup;
   final ValueChanged<int>? onCardTap;
-  final VoidCallback? onDrawStock;
+  // Fires immediately on tap and returns the drawn card so animation can reveal it.
+  final PlayAreaHandCard? Function()? onDrawStock;
   final VoidCallback? onDrawDiscard;
   final VoidCallback? onDiscard;
   final VoidCallback? onShow;
@@ -217,10 +218,10 @@ class _PlayAreaTableState extends State<PlayAreaTable>
       duration: const Duration(milliseconds: 4000),
     )..repeat();
 
-    // 1) 2-Phase Draw Flight Controller (850ms)
+    // 1) 3-Phase Draw Flight Controller: fly up → flip reveal → glide to hand
     _drawController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 850),
+      duration: const Duration(milliseconds: 1200),
     );
     _drawController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
@@ -253,10 +254,10 @@ class _PlayAreaTableState extends State<PlayAreaTable>
       }
     });
 
-    // 3) Opponent Flight Controller (700ms)
+    // 3) Opponent Flight Controller — slow parabolic arc
     _opponentController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 1100),
     );
     _opponentController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
@@ -458,6 +459,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
   void _triggerDrawAnimation({
     required bool fromDiscard,
     required VoidCallback onComplete,
+    PlayAreaHandCard? drawnCard,
   }) {
     if (_isDealing || _drawController.isAnimating) {
       onComplete();
@@ -476,7 +478,8 @@ class _PlayAreaTableState extends State<PlayAreaTable>
           isSpecial: widget.topDiscard!.isSpecial,
         );
       } else {
-        _drawnCardInfo = null;
+        // Stock draw: use the card returned by onDrawStock eager callback
+        _drawnCardInfo = drawnCard;
       }
     });
 
@@ -603,6 +606,22 @@ class _PlayAreaTableState extends State<PlayAreaTable>
             ],
           ),
         ),
+
+        // Discard blackout: dims everything behind the flying card
+        if (_discardingCardInfo != null)
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _discardController,
+              builder: (_, __) => IgnorePointer(
+                child: Container(
+                  color: Colors.black.withValues(
+                    alpha: (Curves.easeInOutCubic.transform(_discardController.value) * 0.62)
+                        .clamp(0.0, 0.62),
+                  ),
+                ),
+              ),
+            ),
+          ),
 
         // Flight layers for user and opponents
         if (_drawController.isAnimating) _buildDrawFlightLayer(),
@@ -1361,9 +1380,12 @@ class _PlayAreaTableState extends State<PlayAreaTable>
       key: _deckKey,
       onTap: canDraw
           ? () {
+              // Fire immediately so engine processes the draw and we get the card
+              final drawn = widget.onDrawStock?.call();
               _triggerDrawAnimation(
                 fromDiscard: false,
-                onComplete: () => widget.onDrawStock?.call(),
+                drawnCard: drawn,
+                onComplete: () {},
               );
             }
           : null,
@@ -2058,8 +2080,9 @@ class _PlayAreaTableState extends State<PlayAreaTable>
         final startX = isDiscard ? size.width * 0.5 + 20 : size.width * 0.5 - 54;
         final startY = size.height * 0.38;
 
-        final centerX = size.width * 0.5 - 34;
-        final centerY = size.height * 0.42;
+        // Showcase position: centered on screen
+        final centerX = size.width * 0.5 - 38;
+        final centerY = size.height * 0.36;
 
         final endX = size.width * 0.5 - 26;
         final endY = size.height - 160;
@@ -2067,65 +2090,110 @@ class _PlayAreaTableState extends State<PlayAreaTable>
         double currentX;
         double currentY;
         double scale;
+        // flipProgress drives 0→1 card-back→face-up during phase 2
+        double flipProgress = 0.0;
+        double glowAlpha = 0.9;
 
-        if (t < 0.45) {
-          // Phase 1: Pop up into center showcase (0 -> 45%)
-          final p = Curves.easeOutBack.transform(t / 0.45);
+        if (t < 0.38) {
+          // Phase 1 (0–38%): fly from deck/discard up to center showcase
+          final p = Curves.easeOutCubic.transform(t / 0.38);
           currentX = startX + (centerX - startX) * p;
           currentY = startY + (centerY - startY) * p;
-          scale = 1.0 + 0.45 * p;
-        } else if (t < 0.55) {
-          // Phase 2: Showcase hover pause (45% -> 55%)
+          scale = 1.0 + 0.55 * p;
+          flipProgress = 0.0;
+        } else if (t < 0.62) {
+          // Phase 2 (38–62%): held at center, card flips to reveal face
+          final p = ((t - 0.38) / 0.24).clamp(0.0, 1.0);
           currentX = centerX;
           currentY = centerY;
-          scale = 1.45;
+          scale = 1.55;
+          flipProgress = Curves.easeInOutCubic.transform(p);
+          glowAlpha = 0.9 + 0.1 * sin(p * pi);
         } else {
-          // Phase 3: Smooth glide from center into hand deck (55% -> 100%)
-          final p = Curves.easeInOutCubic.transform((t - 0.55) / 0.45);
+          // Phase 3 (62–100%): glide from center down into user's hand
+          final p = Curves.easeInCubic.transform((t - 0.62) / 0.38);
           currentX = centerX + (endX - centerX) * p;
           currentY = centerY + (endY - centerY) * p;
-          scale = 1.45 - 0.45 * p;
+          scale = 1.55 - 0.55 * p;
+          flipProgress = 1.0;
         }
+
+        // The flip uses a scaleX trick: 0→0.5 shows back shrinking, 0.5→1 shows face growing
+        final scaleX = flipProgress < 0.5
+            ? 1.0 - flipProgress * 2
+            : (flipProgress - 0.5) * 2;
+        final showFace = flipProgress >= 0.5 || isDiscard;
+
+        Widget cardFace;
+        if (showFace && _drawnCardInfo != null) {
+          cardFace = ZcPlayingCard(
+            rank: _drawnCardInfo!.rank,
+            suit: _drawnCardInfo!.suit,
+            value: _drawnCardInfo!.value,
+            width: 54,
+          );
+        } else {
+          cardFace = ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.asset(
+              widget.theme.cardBackAsset,
+              width: 54,
+              height: 78,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                width: 54,
+                height: 78,
+                color: const Color(0xFF4C1D95),
+              ),
+            ),
+          );
+        }
+
+        // White flash at flip midpoint
+        final flashAlpha = (flipProgress > 0.4 && flipProgress < 0.6)
+            ? sin((flipProgress - 0.4) / 0.2 * pi) * 0.55
+            : 0.0;
 
         return Positioned(
           left: currentX,
           top: currentY,
           child: Transform.scale(
             scale: scale,
-            child: Container(
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFDE047).withValues(alpha: 0.9),
-                    blurRadius: 24,
-                    spreadRadius: 3,
-                  ),
-                ],
-              ),
-              child: isDiscard && _drawnCardInfo != null
-                  ? ZcPlayingCard(
-                      rank: _drawnCardInfo!.rank,
-                      suit: _drawnCardInfo!.suit,
-                      value: _drawnCardInfo!.value,
-                      width: 54,
-                    )
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.asset(
-                        widget.theme.cardBackAsset,
-                        width: 54,
-                        height: 78,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 54,
-                          height: 78,
-                          color: const Color(0xFF4C1D95),
-                          child: const Center(
-                            child: Text('0', style: TextStyle(color: Color(0xFFFDE047), fontWeight: FontWeight.bold)),
+            child: Transform(
+              transform: Matrix4.identity()..scale(scaleX.clamp(0.0, 1.0), 1.0),
+              alignment: Alignment.center,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFDE047).withValues(alpha: glowAlpha * 0.85),
+                      blurRadius: 28,
+                      spreadRadius: 4,
+                    ),
+                    if (flipProgress >= 0.5)
+                      const BoxShadow(
+                        color: Color(0x66FFFFFF),
+                        blurRadius: 16,
+                        spreadRadius: 2,
+                      ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    cardFace,
+                    if (flashAlpha > 0)
+                      Positioned.fill(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            color: Colors.white.withValues(alpha: flashAlpha),
                           ),
                         ),
                       ),
-                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         );
@@ -2145,19 +2213,34 @@ class _PlayAreaTableState extends State<PlayAreaTable>
       animation: _discardController,
       builder: (context, _) {
         final t = _discardController.value;
-        final ease = Curves.easeInOutCubic.transform(t);
         final size = MediaQuery.of(context).size;
 
+        // Phase 1 (0–30%): card lifts up from hand with a pop
+        // Phase 2 (30–100%): smooth arc flight to discard pile
+        double currentX, currentY, scale, angle;
+
         final startX = size.width * 0.5 - 28;
-        final startY = size.height - 150;
-
+        final startY = size.height - 155;
+        final liftX = size.width * 0.5 - 28;
+        final liftY = size.height - 210; // lifts straight up first
         final endX = size.width * 0.5 + 22;
-        final endY = size.height * 0.38;
+        final endY = size.height * 0.40;
 
-        final currentX = startX + (endX - startX) * ease;
-        final currentY = startY + (endY - startY) * ease - sin(ease * pi) * 40; // upward arc
-        final scale = 1.28 - (0.28 * ease);
-        final angle = sin(ease * pi) * -0.12;
+        if (t < 0.28) {
+          // Pop-up lift phase
+          final p = Curves.easeOutBack.transform(t / 0.28);
+          currentX = startX + (liftX - startX) * p;
+          currentY = startY + (liftY - startY) * p;
+          scale = 1.0 + 0.35 * p;
+          angle = 0.0;
+        } else {
+          // Parabolic arc to discard pile
+          final p = Curves.easeInOutCubic.transform((t - 0.28) / 0.72);
+          currentX = liftX + (endX - liftX) * p;
+          currentY = liftY + (endY - liftY) * p - sin(p * pi) * 55;
+          scale = 1.35 - 0.35 * p;
+          angle = sin(p * pi) * -0.18;
+        }
 
         return Positioned(
           left: currentX,
@@ -2168,11 +2251,17 @@ class _PlayAreaTableState extends State<PlayAreaTable>
               scale: scale,
               child: Container(
                 decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(9),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF22C55E).withValues(alpha: 0.85),
-                      blurRadius: 20,
-                      spreadRadius: 3,
+                      color: const Color(0xFF22C55E).withValues(alpha: 0.9),
+                      blurRadius: 24,
+                      spreadRadius: 4,
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
@@ -2232,42 +2321,62 @@ class _PlayAreaTableState extends State<PlayAreaTable>
         final endX = _opponentFlightIsDiscard ? pileX : seatX;
         final endY = _opponentFlightIsDiscard ? pileY : seatY;
 
+        // Slow parabolic arc: ease in-out with sin lift on Y axis
+        final ease = Curves.easeInOutSine.transform(t);
         final currentX = startX + (endX - startX) * ease;
-        final currentY = startY + (endY - startY) * ease;
-        final scale = 0.95 + sin(ease * pi) * 0.20;
+        final arcHeight = _opponentFlightIsDiscard ? 70.0 : 50.0;
+        final currentY = startY + (endY - startY) * ease - sin(ease * pi) * arcHeight;
+        final scale = 0.92 + sin(ease * pi) * 0.22;
+        // Slight rotation during arc
+        final angle = _opponentFlightIsDiscard
+            ? sin(ease * pi) * -0.15
+            : sin(ease * pi) * 0.10;
 
         return Positioned(
           left: currentX,
           top: currentY,
-          child: Transform.scale(
-            scale: scale,
-            child: Container(
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFDE047).withValues(alpha: 0.75),
-                    blurRadius: 16,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: _opponentFlightIsDiscard && _opponentFlightCard != null
-                  ? ZcPlayingCard(
-                      rank: _opponentFlightCard!.rank,
-                      suit: _opponentFlightCard!.suit,
-                      value: _opponentFlightCard!.value,
-                      isSpecial: _opponentFlightCard!.isSpecial,
-                      width: 48,
-                    )
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: Image.asset(
-                        widget.theme.cardBackAsset,
-                        width: 48,
-                        height: 70,
-                        fit: BoxFit.cover,
-                      ),
+          child: Transform.rotate(
+            angle: angle,
+            child: Transform.scale(
+              scale: scale,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(7),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFDE047).withValues(alpha: 0.70),
+                      blurRadius: 18,
+                      spreadRadius: 2,
                     ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: _opponentFlightIsDiscard && _opponentFlightCard != null
+                    ? ZcPlayingCard(
+                        rank: _opponentFlightCard!.rank,
+                        suit: _opponentFlightCard!.suit,
+                        value: _opponentFlightCard!.value,
+                        isSpecial: _opponentFlightCard!.isSpecial,
+                        width: 48,
+                      )
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.asset(
+                          widget.theme.cardBackAsset,
+                          width: 48,
+                          height: 70,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 48, height: 70,
+                            color: const Color(0xFF4C1D95),
+                          ),
+                        ),
+                      ),
+              ),
             ),
           ),
         );
@@ -2482,10 +2591,14 @@ class _PlayAreaTableState extends State<PlayAreaTable>
               label: '🎴 DRAW CARD',
               gradient: const [Color(0xFF2563EB), Color(0xFF1D4ED8)],
               onTap: widget.canDraw
-                  ? () => _triggerDrawAnimation(
+                  ? () {
+                      final drawn = widget.onDrawStock?.call();
+                      _triggerDrawAnimation(
                         fromDiscard: false,
-                        onComplete: () => widget.onDrawStock?.call(),
-                      )
+                        drawnCard: drawn,
+                        onComplete: () {},
+                      );
+                    }
                   : null,
             ),
           ),

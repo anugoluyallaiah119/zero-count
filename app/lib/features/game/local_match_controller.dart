@@ -86,6 +86,17 @@ class LocalMatchState {
     return sp == null ? null : session.specialPinnedRank(sp);
   }
 
+  /// The card the human just drew from stock (populated by DrewStock event).
+  Card? get lastDrawnCard {
+    for (final e in lastEvents) {
+      if (e is DrewStock) {
+        // Most recently added card to hand after a stock draw
+        return you.hand.cards.lastOrNull;
+      }
+    }
+    return null;
+  }
+
   LocalMatchState copyWith({
     GameSession? session,
     int? Function()? selectedCardId,

@@ -264,7 +264,7 @@ class _LiveGameScreenState extends ConsumerState<LiveGameScreen> {
                 _controller.selectCard(id);
               }
             },
-            onDrawStock: () => _controller.drawStock(),
+            onDrawStock: () { _controller.drawStock(); return null; },
             onDrawDiscard: () => _controller.drawDiscard(),
             onDiscard: () => _controller.discardSelected(),
             onShow: () => _controller.show(),

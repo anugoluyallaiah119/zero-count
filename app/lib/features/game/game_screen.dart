@@ -199,8 +199,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               ref.read(localMatchProvider.notifier).selectCard(id);
             }
           },
-          onDrawStock: () =>
-              ref.read(localMatchProvider.notifier).drawStock(),
+          onDrawStock: () {
+            ref.read(localMatchProvider.notifier).drawStock();
+            // Return the just-drawn card so the animation can flip-reveal it
+            final drawn = ref.read(localMatchProvider)?.lastDrawnCard;
+            if (drawn == null) return null;
+            return PlayAreaHandCard(
+              id: drawn.id,
+              rank: drawn.rank.label,
+              suit: _zcSuit(drawn.suit),
+              value: drawn.value,
+              isSpecial: drawn.isSpecial,
+            );
+          },
           onDrawDiscard: () =>
               ref.read(localMatchProvider.notifier).drawDiscard(),
           onDiscard: () =>
