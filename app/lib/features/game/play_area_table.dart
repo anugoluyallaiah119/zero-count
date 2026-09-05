@@ -528,6 +528,10 @@ class _PlayAreaTableState extends State<PlayAreaTable>
 
   @override
   Widget build(BuildContext context) {
+    if (_isJapan) {
+      return _buildJapanPlayArea(context);
+    }
+
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -538,7 +542,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
           child: Column(
             children: [
               _buildTopHeader(),
-              if (!_isJapan) _buildSubHeader(),
+              _buildSubHeader(),
               // Responsive expanded table area that houses all table elements + hand
               Expanded(
                 child: Stack(
@@ -547,16 +551,14 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                   children: [
                     _buildTableFeltAndPiles(),
                     ..._buildOpponents(),
-                    if (!_isJapan) _buildYouAvatar(),
+                    _buildYouAvatar(),
                     // Deal ceremony card distribution flight layer
                     if (_isDealing) _buildDealCeremonyLayer(),
                   ],
                 ),
               ),
-              if (_isJapan) _buildJapanBottomArea() else ...[
-                _buildHandArea(),
-                _buildActionBar(),
-              ],
+              _buildHandArea(),
+              _buildActionBar(),
             ],
           ),
         ),
@@ -566,6 +568,144 @@ class _PlayAreaTableState extends State<PlayAreaTable>
         if (_discardingCardInfo != null) _buildDiscardFlightLayer(),
         if (_opponentController.isAnimating) _buildOpponentFlightLayer(),
       ],
+    );
+  }
+
+  Widget _buildJapanPlayArea(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenHeight = constraints.maxHeight;
+
+        final p1 = widget.players.length > 1 ? widget.players[1] : null;
+        final p2 = widget.players.length > 2 ? widget.players[2] : null;
+        final p3 = widget.players.length > 3 ? widget.players[3] : null;
+
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            // 1. Full Screen Background
+            Positioned.fill(
+              child: Image.asset(
+                'assets/art/play_area_bg_japan.jpg',
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+              ),
+            ),
+
+            // 2. Top Header Navigation
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: _buildTopHeader(),
+              ),
+            ),
+
+            // 3. Top Opponent (Miyu)
+            Positioned(
+              top: screenHeight * 0.09,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildAvatarPill(
+                      player: p1 ?? const PlayAreaPlayer(name: 'Miyu', score: 28, cards: 4, order: 1),
+                      fallbackName: 'Miyu',
+                      asset: 'assets/art/av_japan_miyu.png',
+                      ringColor: const Color(0xFFD4AF37),
+                      order: 1,
+                    ),
+                    const SizedBox(height: 5),
+                    _buildOpponentCards(count: p1?.cards ?? 4, vertical: true),
+                  ],
+                ),
+              ),
+            ),
+
+            // 4. Left Opponent (Hiro)
+            Positioned(
+              left: 16,
+              top: screenHeight * 0.35,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _buildAvatarPill(
+                    player: p2 ?? const PlayAreaPlayer(name: 'Hiro', score: 34, cards: 4, order: 2),
+                    fallbackName: 'Hiro',
+                    asset: 'assets/art/av_japan_hiro.png',
+                    ringColor: const Color(0xFFD4AF37),
+                    order: 2,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildOpponentCards(count: p2?.cards ?? 4, vertical: false),
+                ],
+              ),
+            ),
+
+            // 5. Right Opponent (Kenji)
+            Positioned(
+              right: 16,
+              top: screenHeight * 0.35,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _buildOpponentCards(count: p3?.cards ?? 4, vertical: false),
+                  const SizedBox(width: 8),
+                  _buildAvatarPill(
+                    player: p3 ?? const PlayAreaPlayer(name: 'Kenji', score: 22, cards: 4, order: 3),
+                    fallbackName: 'Kenji',
+                    asset: 'assets/art/av_japan_kenji.png',
+                    ringColor: const Color(0xFFD4AF37),
+                    order: 3,
+                  ),
+                ],
+              ),
+            ),
+
+            // 6. Center Zen Enso Circle: Draw Pile & Discard Pile (Placed directly inside the circle of the image)
+            Positioned(
+              top: screenHeight * 0.38,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _buildDrawDeck(),
+                    const SizedBox(width: 36),
+                    _buildDiscardPile(),
+                  ],
+                ),
+              ),
+            ),
+
+            // 7. Bottom Hand & Controls Area
+            Positioned(
+              bottom: 10,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                top: false,
+                child: _buildJapanBottomArea(),
+              ),
+            ),
+
+            // Flight animation layers
+            if (_drawController.isAnimating) _buildDrawFlightLayer(),
+            if (_discardingCardInfo != null) _buildDiscardFlightLayer(),
+            if (_opponentController.isAnimating) _buildOpponentFlightLayer(),
+            if (_isDealing) _buildDealCeremonyLayer(),
+          ],
+        );
+      },
     );
   }
 
