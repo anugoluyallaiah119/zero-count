@@ -204,13 +204,13 @@ class ZcPlayingCard extends StatelessWidget {
                       ],
                     ),
                   )
-                // ── Standard card — clean physical layout with value badge ─
+                // ── Standard card — matching reference design ───────────
                 : Stack(
                     children: [
                       // Top-left corner: rank + suit
                       Positioned(
                         top: width * 0.08,
-                        left: width * 0.08,
+                        left: width * 0.09,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           mainAxisSize: MainAxisSize.min,
@@ -218,21 +218,25 @@ class ZcPlayingCard extends StatelessWidget {
                             Text(
                               rank,
                               style: TextStyle(
-                                fontSize: width * 0.285,
+                                fontSize: width * 0.28,
                                 fontWeight: FontWeight.w900,
                                 color: suit.color,
                                 height: 1.0,
                                 fontFamily: 'Nunito',
                               ),
                             ),
-                            SuitIcon(suit, width: width * 0.20),
+                            const SizedBox(height: 1),
+                            SuitIcon(suit, width: width * 0.19),
                           ],
                         ),
                       ),
 
                       // Center: large suit pip
                       Center(
-                        child: SuitIcon(suit, width: width * 0.46),
+                        child: Padding(
+                          padding: EdgeInsets.only(left: width * 0.05, top: width * 0.02),
+                          child: SuitIcon(suit, width: width * 0.44),
+                        ),
                       ),
 
                       // Bottom-right corner: Point value badge (A=1, 2..10, J/Q/K=10)
@@ -240,38 +244,38 @@ class ZcPlayingCard extends StatelessWidget {
                         right: width * 0.06,
                         bottom: width * 0.06,
                         child: Container(
-                          width: width * 0.33,
-                          height: width * 0.33,
+                          width: width * 0.32,
+                          height: width * 0.32,
                           decoration: BoxDecoration(
                             color: selected
                                 ? const Color(0xFFFDE047)
-                                : const Color(0xFF1E1B4B),
+                                : const Color(0xFF18181B),
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: selected
                                   ? const Color(0xFFB45309)
-                                  : const Color(0x40FFFFFF),
+                                  : const Color(0x33FFFFFF),
                               width: 0.8,
                             ),
                             boxShadow: [
-                              if (selected)
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.4),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 1),
-                                ),
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.35),
+                                blurRadius: 3,
+                                offset: const Offset(0, 1),
+                              ),
                             ],
                           ),
                           alignment: Alignment.center,
                           child: Text(
                             '$value',
                             style: TextStyle(
-                              fontSize: width * 0.18,
+                              fontSize: value >= 10 ? width * 0.155 : width * 0.18,
                               fontWeight: FontWeight.w900,
                               color: selected
-                                  ? const Color(0xFF1E1B4B)
+                                  ? const Color(0xFF18181B)
                                   : const Color(0xFFFDE047),
                               fontFamily: 'Nunito',
+                              height: 1.0,
                             ),
                           ),
                         ),
