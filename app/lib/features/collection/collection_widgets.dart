@@ -439,47 +439,46 @@ class CollectionGridCard extends ConsumerWidget {
                         ),
                       )
                     : ClipRRect(
-                  borderRadius: BorderRadius.circular(9),
-                  child: AspectRatio(
-                    aspectRatio: artAspect,
-                    child: isCardBack
-                        ? LayoutBuilder(
-                            builder: (context, box) => ZcCardBackWidget(
-                              backId: item.asset,
-                              width: box.maxWidth,
-                            ),
-                          )
-                        : const SizedBox.shrink()
-                            : Image.asset(
-                                item.asset,
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                errorBuilder: (_, __, ___) => Container(
-                                  color: const Color(0xFF2E1065),
-                                  child: Center(
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(Icons.style_rounded,
-                                            color: Color(0xFFFDE047), size: 22),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          item.name,
-                                          style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 8,
-                                            fontWeight: FontWeight.bold,
+                        borderRadius: BorderRadius.circular(9),
+                        child: AspectRatio(
+                          aspectRatio: artAspect,
+                          child: isCardBack
+                              ? LayoutBuilder(
+                                  builder: (context, box) => ZcCardBackWidget(
+                                    backId: item.asset,
+                                    width: box.maxWidth,
+                                  ),
+                                )
+                              : Image.asset(
+                                  item.asset,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    color: const Color(0xFF2E1065),
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.style_rounded,
+                                              color: Color(0xFFFDE047), size: 22),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            item.name,
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                            maxLines: 1,
                                           ),
-                                          textAlign: TextAlign.center,
-                                          maxLines: 1,
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                  ),
-                ),
+                        ),
+                      ),
                 // Top-right badge: checkmark if equipped, heart if owned, lock if not owned
                 if (!item.equipped)
                   Positioned(
