@@ -1085,12 +1085,14 @@ class _PlayAreaTableState extends State<PlayAreaTable>
 
   Widget _buildTableFeltAndPiles() {
     if (_isJapan) {
-      return Center(
+      return Align(
+        alignment: const Alignment(0.0, 0.08),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _buildDrawDeck(),
-            const SizedBox(width: 32),
+            const SizedBox(width: 34),
             _buildDiscardPile(),
           ],
         ),
