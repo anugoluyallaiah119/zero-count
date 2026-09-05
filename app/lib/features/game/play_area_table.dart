@@ -545,31 +545,6 @@ class _PlayAreaTableState extends State<PlayAreaTable>
           ),
         ),
 
-        // Discard blackout: only dims during arc phase (28-80%), fades out before end
-        if (_discardingCardInfo != null)
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _discardController,
-              builder: (_, __) {
-                final t = _discardController.value;
-                // Fade in 0.28→0.50, hold 0.50→0.72, fade out 0.72→1.0
-                double alpha = 0.0;
-                if (t >= 0.28 && t < 0.50) {
-                  alpha = ((t - 0.28) / 0.22) * 0.52;
-                } else if (t >= 0.50 && t < 0.72) {
-                  alpha = 0.52;
-                } else if (t >= 0.72) {
-                  alpha = (1.0 - (t - 0.72) / 0.28) * 0.52;
-                }
-                return IgnorePointer(
-                  child: Container(
-                    color: Colors.black.withValues(alpha: alpha.clamp(0.0, 0.52)),
-                  ),
-                );
-              },
-            ),
-          ),
-
         // Flight layers for user and opponents
         if (_drawController.isAnimating) _buildDrawFlightLayer(),
         if (_discardingCardInfo != null) _buildDiscardFlightLayer(),
@@ -2127,25 +2102,9 @@ class _PlayAreaTableState extends State<PlayAreaTable>
             ),
             const SizedBox(height: 4),
 
-            // Hand Fan Dock Tray
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              padding: const EdgeInsets.fromLTRB(4, 2, 4, 3),
-              decoration: BoxDecoration(
-                color: const Color(0x35140632),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0x33A855F7),
-                  width: 1.1,
-                ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x1F8B5CF6),
-                    blurRadius: 16,
-                    spreadRadius: -2,
-                  ),
-                ],
-              ),
+            // Hand Fan Area
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Center(
                 child: ZcCardFan(
                   key: const Key('playerHand'),
