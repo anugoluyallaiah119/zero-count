@@ -1002,12 +1002,6 @@ class _PlayAreaTableState extends State<PlayAreaTable>
     });
   }
 
-  // ── removed: inline theme-visual code moved to PlayAreaTableFelt ─────────
-      );
-    });
-  }
-
-
   Widget _buildDrawDeck() {
     final canDraw = widget.isMyTurn && widget.canDraw && !_isDealing;
 
@@ -1925,7 +1919,6 @@ class _PlayAreaTableState extends State<PlayAreaTable>
       builder: (context, _) {
         if (!_opponentController.isAnimating) return const SizedBox();
         final t = _opponentController.value;
-        final ease = Curves.easeInOutCubic.transform(t);
         final size = MediaQuery.of(context).size;
 
         // Opponent seat coordinates

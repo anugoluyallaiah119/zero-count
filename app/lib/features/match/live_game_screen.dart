@@ -731,14 +731,15 @@ class _LiveMatchOverOverlay extends StatelessWidget {
     final List<({int playerIdx, String name, int score, String avatar, bool isYou})> standings = [];
     for (var i = 0; i < seats.length; i++) {
       final seat = seats[i];
+      final isYou = seat.id == myUserId;
       standings.add((
         playerIdx: i,
-        name: seat.name.isNotEmpty ? seat.name : 'Player ${i + 1}',
+        name: isYou ? 'You' : 'Player ${i + 1}',
         score: i < totals.length ? totals[i] : 0,
         avatar: seat.equippedAvatar.isNotEmpty
             ? seat.equippedAvatar
             : _avatarAssets[i % _avatarAssets.length],
-        isYou: seat.id == myUserId,
+        isYou: isYou,
       ));
     }
     standings.sort((a, b) => a.score.compareTo(b.score));
@@ -771,8 +772,6 @@ class _LiveMatchOverOverlay extends StatelessWidget {
       ),
     );
   }
-}
-
 }
 
 class _OverBtn extends StatelessWidget {
