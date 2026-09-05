@@ -130,16 +130,19 @@ class PlayAreaTheme {
     neonCyber,
   ];
 
-  static PlayAreaTheme get defaultTheme => brazilCarnival;
+  static PlayAreaTheme get defaultTheme => sakuraJapan;
 
   static PlayAreaTheme random() => all[0];
 
-  static PlayAreaTheme randomFor(int playerCount) => brazilCarnival;
+  static PlayAreaTheme randomFor(int playerCount) => sakuraJapan;
 
-  /// Returns the theme matching [themeId], falling back to brazilCarnival.
+  /// Returns the theme matching [themeId], falling back to sakuraJapan.
   static PlayAreaTheme forId(String? themeId) {
-    if (themeId == null) return brazilCarnival;
-    return all.firstWhere((t) => t.id == themeId, orElse: () => brazilCarnival);
+    if (themeId == null) return sakuraJapan;
+    if (themeId == 'th_zen_garden' || themeId == 'th_sakura_garden' || themeId == 'sakuraJapan' || themeId == 'japan') {
+      return sakuraJapan;
+    }
+    return all.firstWhere((t) => t.id == themeId, orElse: () => sakuraJapan);
   }
 
   @override
@@ -153,7 +156,7 @@ class PlayAreaTheme {
 /// Global provider for currently equipped theme.
 class EquippedThemeNotifier extends Notifier<PlayAreaTheme> {
   @override
-  PlayAreaTheme build() => PlayAreaTheme.brazilCarnival;
+  PlayAreaTheme build() => PlayAreaTheme.sakuraJapan;
 
   void setTheme(PlayAreaTheme theme) {
     state = theme;

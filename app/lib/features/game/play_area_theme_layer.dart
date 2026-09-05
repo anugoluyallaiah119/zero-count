@@ -164,100 +164,171 @@ class _JapanLeftPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xCC1A0800),
-        borderRadius: const BorderRadius.horizontal(right: Radius.circular(10)),
-        border: Border.all(color: const Color(0x44E8A4B8), width: 0.8),
-      ),
+      margin: const EdgeInsets.only(left: 6),
+      width: 48,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(height: 1, color: const Color(0x88E8A4B8)),
-          const SizedBox(height: 12),
-          const Text('雅',
-              style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontSize: 26,
-                  color: Color(0xFFE8A4B8),
-                  fontWeight: FontWeight.w900,
-                  height: 1.0)),
-          const SizedBox(height: 10),
-          Container(width: 24, height: 1, color: const Color(0x66E8A4B8)),
-          const SizedBox(height: 10),
-          for (final c in ['Z', 'E', 'R', 'O', '', 'C', 'O', 'U', 'N', 'T'])
-            Text(c,
-                style: const TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 8,
+          // Scroll top wooden rod
+          Container(
+            height: 5,
+            width: 46,
+            decoration: BoxDecoration(
+              color: const Color(0xFF3E2723),
+              borderRadius: BorderRadius.circular(3),
+              boxShadow: const [
+                BoxShadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2)),
+              ],
+            ),
+          ),
+          // Parchment body
+          Container(
+            width: 40,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFBF6EA),
+              borderRadius: BorderRadius.circular(2),
+              boxShadow: const [
+                BoxShadow(color: Colors.black38, blurRadius: 6, offset: Offset(0, 3)),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  '雅',
+                  style: TextStyle(
+                    fontSize: 24,
+                    color: Color(0xFF1F1A17),
                     fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
-                    color: Color(0xCCFFD4E8),
-                    height: 1.5)),
-          const SizedBox(height: 10),
-          Container(height: 1, color: const Color(0x88E8A4B8)),
+                    height: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(width: 20, height: 1, color: const Color(0xFFBCAAA4)),
+                const SizedBox(height: 4),
+                const Text(
+                  'ZERO\nCOUNT',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 6,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                    color: Color(0xFF4E342E),
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                // Red Hanko seal stamp
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFB91C1C),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    '零',
+                    style: TextStyle(
+                      fontSize: 8,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      height: 1.0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Scroll bottom wooden weight rod
+          Container(
+            height: 6,
+            width: 46,
+            decoration: BoxDecoration(
+              color: const Color(0xFF3E2723),
+              borderRadius: BorderRadius.circular(3),
+              boxShadow: const [
+                BoxShadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2)),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-// ── Japan right bamboo/lantern panel ────────────────────────────────────────
+// ── Japan right wooden board panel ──────────────────────────────────────────
 
 class _JapanRightPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xCC1A0800),
-        borderRadius: const BorderRadius.horizontal(left: Radius.circular(10)),
-        border: Border.all(color: const Color(0x44E8A4B8), width: 0.8),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(height: 1, color: const Color(0x88E8A4B8)),
-          const SizedBox(height: 12),
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xAACC2200),
-              border: Border.all(color: const Color(0x88FF6B9D), width: 1),
+      margin: const EdgeInsets.only(right: 6),
+      width: 48,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2E1A11),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: const Color(0xFF8D6E63), width: 1),
+          boxShadow: const [
+            BoxShadow(color: Colors.black45, blurRadius: 6, offset: Offset(0, 3)),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final c in ['一', '手', 'で', '変', 'わ', 'る'])
+              Text(
+                c,
+                style: const TextStyle(
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFFFFCC80),
+                  height: 1.35,
+                ),
+              ),
+            const SizedBox(height: 4),
+            Container(width: 18, height: 1, color: const Color(0xFF6D4C41)),
+            const SizedBox(height: 4),
+            const Text(
+              'PLAY\nCALM\nPLAY\nSMART',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 4.8,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFFBCAAA4),
+                letterSpacing: 0.3,
+                height: 1.25,
+              ),
             ),
-            alignment: Alignment.center,
-            child: const Text('和',
+            const SizedBox(height: 4),
+            // Red seal
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: const Color(0xFFB91C1C),
+                borderRadius: BorderRadius.circular(2),
+              ),
+              alignment: Alignment.center,
+              child: const Text(
+                '印',
                 style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    height: 1.0)),
-          ),
-          const SizedBox(height: 10),
-          Container(width: 24, height: 1, color: const Color(0x66E8A4B8)),
-          const SizedBox(height: 10),
-          for (final c in ['一', '手', 'で', '変', 'わ', 'る'])
-            Text(c,
-                style: const TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xCCFFD4E8),
-                    height: 1.6)),
-          const SizedBox(height: 8),
-          Container(width: 24, height: 1, color: const Color(0x44E8A4B8)),
-          const SizedBox(height: 8),
-          for (final c in ['P', 'L', 'A', 'Y', ' ', 'C', 'A', 'L', 'M'])
-            Text(c,
-                style: const TextStyle(
-                    fontFamily: 'Nunito',
-                    fontSize: 6.5,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0x99FFD4E8),
-                    height: 1.5,
-                    letterSpacing: 0.3)),
-          const SizedBox(height: 12),
-          Container(height: 1, color: const Color(0x88E8A4B8)),
-        ],
+                  fontSize: 6.5,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  height: 1.0,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -416,7 +487,7 @@ class _FallbackFelt extends StatelessWidget {
   }
 }
 
-// ── Japan Enso ink circle painter ───────────────────────────────────────────
+// ── Japan Enso ink circle painter with drifting sakura petals ──────────────
 
 class _EnsoPainter extends CustomPainter {
   @override
@@ -425,51 +496,93 @@ class _EnsoPainter extends CustomPainter {
     final cy = size.height / 2;
     final r = size.width * 0.44;
 
+    // Golden Enso brush stroke
     final paint = Paint()
-      ..color = const Color(0x552D1A00)
+      ..color = const Color(0x99D4AF37)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 14
+      ..strokeWidth = 6.0
       ..strokeCap = StrokeCap.round;
 
     canvas.drawArc(
       Rect.fromCircle(center: Offset(cx, cy), radius: r),
-      -pi * 0.7,
-      pi * 1.85,
+      -pi * 0.75,
+      pi * 1.82,
       false,
       paint,
     );
 
+    // Inner subtle gold ring
     paint
-      ..color = const Color(0x22E8A4B8)
-      ..strokeWidth = 2;
-    canvas.drawCircle(Offset(cx, cy), r * 0.72, paint);
+      ..color = const Color(0x44D4AF37)
+      ..strokeWidth = 1.2;
+    canvas.drawCircle(Offset(cx, cy), r * 0.88, paint);
+
+    // ZERO COUNT logo text
+    final sub = TextPainter(
+      text: const TextSpan(
+        text: 'ZERO COUNT',
+        style: TextStyle(
+          fontFamily: 'Nunito',
+          fontSize: 12,
+          color: Color(0xFFD4AF37),
+          fontWeight: FontWeight.w900,
+          letterSpacing: 3.5,
+          height: 1.0,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    sub.paint(canvas, Offset(cx - sub.width / 2, cy + 18));
+
+    // Red Hanko Seal Stamp (零)
+    const sealSize = 24.0;
+    final sealRect = Rect.fromCenter(
+      center: Offset(cx, cy + 42),
+      width: sealSize,
+      height: sealSize,
+    );
+    final sealPaint = Paint()
+      ..color = const Color(0xFFB91C1C)
+      ..style = PaintingStyle.fill;
+    canvas.drawRRect(RRect.fromRectAndRadius(sealRect, const Radius.circular(4)), sealPaint);
+
+    final borderPaint = Paint()
+      ..color = const Color(0xFFFFCDD2)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8;
+    canvas.drawRRect(RRect.fromRectAndRadius(sealRect.deflate(1.5), const Radius.circular(3)), borderPaint);
 
     final tp = TextPainter(
       text: const TextSpan(
         text: '零',
         style: TextStyle(
-            fontSize: 38,
-            color: Color(0x66C8787E),
-            fontWeight: FontWeight.w900,
-            height: 1.0),
+          fontSize: 14,
+          color: Colors.white,
+          fontWeight: FontWeight.w900,
+          height: 1.0,
+        ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    tp.paint(canvas, Offset(cx - tp.width / 2, cy - tp.height / 2 - 2));
+    tp.paint(canvas, Offset(cx - tp.width / 2, cy + 42 - tp.height / 2));
 
-    final sub = TextPainter(
-      text: const TextSpan(
-        text: 'ZERO COUNT',
-        style: TextStyle(
-            fontSize: 8,
-            color: Color(0x55C8787E),
-            fontWeight: FontWeight.w900,
-            letterSpacing: 2.5,
-            height: 1.0),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    sub.paint(canvas, Offset(cx - sub.width / 2, cy + 24));
+    // Scattered Sakura cherry blossom petals (🌸)
+    final petalPaint = Paint()..color = const Color(0xCCD88098);
+    _drawPetal(canvas, Offset(cx - r * 0.7, cy - r * 0.4), 6, petalPaint);
+    _drawPetal(canvas, Offset(cx + r * 0.75, cy - r * 0.2), 5.5, petalPaint);
+    _drawPetal(canvas, Offset(cx - r * 0.6, cy + r * 0.5), 7, petalPaint);
+    _drawPetal(canvas, Offset(cx + r * 0.65, cy + r * 0.35), 6.5, petalPaint);
+    _drawPetal(canvas, Offset(cx + r * 0.85, cy + r * 0.6), 5, petalPaint);
+  }
+
+  void _drawPetal(Canvas canvas, Offset center, double size, Paint paint) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset.zero, width: size * 1.5, height: size),
+      paint,
+    );
+    canvas.restore();
   }
 
   @override

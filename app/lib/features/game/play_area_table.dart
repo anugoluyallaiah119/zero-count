@@ -512,6 +512,11 @@ class _PlayAreaTableState extends State<PlayAreaTable>
     _discardController.forward(from: 0.0);
   }
 
+  bool get _isJapan =>
+      widget.theme.id == 'sakuraJapan' ||
+      widget.theme.id == 'th_zen_garden' ||
+      widget.theme.id == 'th_sakura_garden';
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -524,7 +529,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
           child: Column(
             children: [
               _buildTopHeader(),
-              _buildSubHeader(),
+              if (!_isJapan) _buildSubHeader(),
               // Responsive expanded table area that houses all table elements + hand
               Expanded(
                 child: Stack(
@@ -533,14 +538,16 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                   children: [
                     _buildTableFeltAndPiles(),
                     ..._buildOpponents(),
-                    _buildYouAvatar(),
+                    if (!_isJapan) _buildYouAvatar(),
                     // Deal ceremony card distribution flight layer
                     if (_isDealing) _buildDealCeremonyLayer(),
                   ],
                 ),
               ),
-              _buildHandArea(),
-              _buildActionBar(),
+              if (_isJapan) _buildJapanBottomArea() else ...[
+                _buildHandArea(),
+                _buildActionBar(),
+              ],
             ],
           ),
         ),
@@ -558,6 +565,166 @@ class _PlayAreaTableState extends State<PlayAreaTable>
   // -------------------------------------------------------------------------
 
   Widget _buildTopHeader() {
+    if (_isJapan) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(14, 6, 14, 2),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Menu button [ ≡ ]
+            GestureDetector(
+              onTap: widget.onBack,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xAA180C28),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0x44FFFFFF), width: 1.1),
+                ),
+                child: const Icon(Icons.menu_rounded, color: Colors.white, size: 22),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // Mode Pill [ 👥 Classic Mode / 4 Players ]
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xAA180C28),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0x44FFFFFF), width: 1.1),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.groups_rounded, color: Colors.white, size: 16),
+                  const SizedBox(width: 6),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.modeLabel,
+                        style: const TextStyle(
+                          fontFamily: 'Nunito',
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          height: 1.1,
+                        ),
+                      ),
+                      const Text(
+                        '4 Players',
+                        style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white70,
+                          height: 1.0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const Spacer(),
+
+            // Poetic text: GOOD CARDS / BETTER MOVES / BRIGHTER YOU
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'GOOD CARDS',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 7.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                    color: Color(0xCCFFD4E8),
+                    height: 1.25,
+                  ),
+                ),
+                Text(
+                  'BETTER MOVES',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 7.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                    color: Color(0xCCFFD4E8),
+                    height: 1.25,
+                  ),
+                ),
+                Text(
+                  'BRIGHTER YOU',
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 7.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                    color: Color(0xCCFFD4E8),
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 12),
+
+            // Sound Button [ 🔊 ]
+            GestureDetector(
+              onTap: () {},
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: const Color(0xAA180C28),
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: const Color(0x33FFFFFF), width: 1),
+                ),
+                child: const Icon(Icons.volume_up_rounded, color: Colors.white, size: 16),
+              ),
+            ),
+            const SizedBox(width: 6),
+
+            // Chat / Sticker Button [ 💬 ]
+            GestureDetector(
+              onTap: widget.onChat,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: const Color(0xAA180C28),
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: const Color(0x33FFFFFF), width: 1),
+                ),
+                child: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white, size: 16),
+              ),
+            ),
+            const SizedBox(width: 6),
+
+            // Settings Button [ ⚙ ]
+            GestureDetector(
+              onTap: widget.onSettings,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: const Color(0xAA180C28),
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: const Color(0x33FFFFFF), width: 1),
+                ),
+                child: const Icon(Icons.settings_rounded, color: Colors.white, size: 16),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 4, 10, 2),
       child: Row(
@@ -1073,9 +1240,9 @@ class _PlayAreaTableState extends State<PlayAreaTable>
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'DRAW DECK',
-            style: TextStyle(
+          Text(
+            _isJapan ? 'Draw Pile' : 'DRAW DECK',
+            style: const TextStyle(
               fontFamily: 'Nunito',
               fontSize: 10.5,
               fontWeight: FontWeight.w900,
@@ -1153,9 +1320,9 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                   ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'DISCARD PILE',
-            style: TextStyle(
+          Text(
+            _isJapan ? 'Discard' : 'DISCARD PILE',
+            style: const TextStyle(
               fontFamily: 'Nunito',
               fontSize: 10.5,
               fontWeight: FontWeight.w900,
@@ -1258,12 +1425,21 @@ class _PlayAreaTableState extends State<PlayAreaTable>
           top: 6,
           child: Container(
             key: _seatTopKey,
-            child: _buildAvatarPill(
-              player: p1,
-              fallbackName: 'Rahul',
-              asset: p1.avatarAsset ?? 'assets/art/play_area_avatar_1.png',
-              ringColor: const Color(0xFFC084FC),
-              order: 1,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildAvatarPill(
+                  player: p1,
+                  fallbackName: _isJapan ? 'Miyu' : 'Rahul',
+                  asset: p1.avatarAsset ?? 'assets/art/play_area_avatar_1.png',
+                  ringColor: _isJapan ? const Color(0xFFD4AF37) : const Color(0xFFC084FC),
+                  order: 1,
+                ),
+                if (_isJapan) ...[
+                  const SizedBox(height: 3),
+                  _buildOpponentCards(count: p1.cards, vertical: true),
+                ],
+              ],
             ),
           ),
         ),
@@ -1278,12 +1454,22 @@ class _PlayAreaTableState extends State<PlayAreaTable>
           top: MediaQuery.of(context).size.height * 0.16,
           child: Container(
             key: _seatLeftKey,
-            child: _buildAvatarPill(
-              player: p2,
-              fallbackName: 'Sneha',
-              asset: p2.avatarAsset ?? 'assets/art/play_area_avatar_2.png',
-              ringColor: const Color(0xFF38BDF8),
-              order: 2,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _buildAvatarPill(
+                  player: p2,
+                  fallbackName: _isJapan ? 'Hiro' : 'Sneha',
+                  asset: p2.avatarAsset ?? 'assets/art/play_area_avatar_2.png',
+                  ringColor: _isJapan ? const Color(0xFFD4AF37) : const Color(0xFF38BDF8),
+                  order: 2,
+                ),
+                if (_isJapan) ...[
+                  const SizedBox(width: 6),
+                  _buildOpponentCards(count: p2.cards, vertical: false),
+                ],
+              ],
             ),
           ),
         ),
@@ -1298,12 +1484,22 @@ class _PlayAreaTableState extends State<PlayAreaTable>
           top: MediaQuery.of(context).size.height * 0.16,
           child: Container(
             key: _seatRightKey,
-            child: _buildAvatarPill(
-              player: p3,
-              fallbackName: 'Karan',
-              asset: p3.avatarAsset ?? 'assets/art/play_area_avatar_3.png',
-              ringColor: const Color(0xFFF59E0B),
-              order: 3,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (_isJapan) ...[
+                  _buildOpponentCards(count: p3.cards, vertical: false),
+                  const SizedBox(width: 6),
+                ],
+                _buildAvatarPill(
+                  player: p3,
+                  fallbackName: _isJapan ? 'Kenji' : 'Karan',
+                  asset: p3.avatarAsset ?? 'assets/art/play_area_avatar_3.png',
+                  ringColor: _isJapan ? const Color(0xFFD4AF37) : const Color(0xFFF59E0B),
+                  order: 3,
+                ),
+              ],
             ),
           ),
         ),
@@ -2335,6 +2531,437 @@ class _PlayAreaTableState extends State<PlayAreaTable>
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Japan Theme Specific Bottom Area (Landscape / Zen Mat Mockup Layout)
+  // -------------------------------------------------------------------------
+
+  Widget _buildOpponentCards({required int count, required bool vertical}) {
+    final c = count.clamp(1, 5);
+    if (vertical) {
+      return SizedBox(
+        width: 32 + (c - 1) * 8.0,
+        height: 38,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            for (var i = 0; i < c; i++)
+              Positioned(
+                left: i * 8.0,
+                child: Transform.rotate(
+                  angle: (i - (c - 1) / 2) * 0.08,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2)),
+                      ],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const ZcCardBackWidget(backId: 'cb_sakura', width: 24),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+    return SizedBox(
+      width: 32 + (c - 1) * 8.0,
+      height: 38,
+      child: Stack(
+        alignment: Alignment.centerLeft,
+        children: [
+          for (var i = 0; i < c; i++)
+            Positioned(
+              left: i * 8.0,
+              child: Transform.rotate(
+                angle: (i - (c - 1) / 2) * 0.06,
+                child: Container(
+                  decoration: BoxDecoration(
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2)),
+                    ],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const ZcCardBackWidget(backId: 'cb_sakura', width: 24),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildJapanBottomArea() {
+    final currentScore = _calculateHandScore(widget.hand);
+    final countAfterDiscard = (widget.selectedCardId != null && widget.phase == 'DISCARD')
+        ? _calculateHandScore(widget.hand.where((c) => c.id != widget.selectedCardId).toList())
+        : null;
+
+    final cardList = [
+      for (final c in widget.hand)
+        (id: c.id, rank: c.rank, suit: c.suit, value: c.value, isSpecial: c.isSpecial)
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // Left control buttons stack [Sort, Hint, Auto]
+          _buildJapanLeftControlStack(),
+          const SizedBox(width: 8),
+
+          // You avatar with glowing halo and score pill
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFFDE047), width: 2.2),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x99FDE047),
+                      blurRadius: 14,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: _avatarWidget(
+                    widget.players.isNotEmpty ? widget.players[0].avatarAsset : null,
+                    48,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 3),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xDD1A0C06),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0x44D4AF37), width: 1),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'You',
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      countAfterDiscard != null ? '$countAfterDiscard' : '$currentScore',
+                      style: const TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFFFDE047),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          // Center: Player's hand of cards
+          Expanded(
+            child: Center(
+              child: ZcCardFan(
+                key: const Key('playerHand'),
+                cards: cardList,
+                cardWidth: 46,
+                enableGrouping: widget.grouping,
+                selectedCardId: widget.selectedCardId,
+                onCardTap: (id) {
+                  if (widget.isMyTurn && (widget.phase == 'DISCARD' || widget.phase == 'DRAW')) {
+                    widget.onCardTap?.call(id);
+                  }
+                },
+              ),
+            ),
+          ),
+
+          // Right: Glowing "Your Turn" beacon / Action Button / Tea Bowl
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (widget.isMyTurn) ...[
+                _buildGlowingYourTurnBeacon(),
+                const SizedBox(width: 8),
+              ],
+              _buildJapanActionBtn(),
+              const SizedBox(width: 8),
+              _buildTeaBowl(),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildJapanLeftControlStack() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildJapanControlBtn(
+          icon: Icons.swap_vert_rounded,
+          label: 'Sort',
+          onTap: widget.onSort,
+        ),
+        const SizedBox(height: 5),
+        _buildJapanControlBtn(
+          icon: Icons.lightbulb_rounded,
+          label: 'Hint',
+          onTap: widget.onHint,
+        ),
+        const SizedBox(height: 5),
+        _buildJapanControlBtn(
+          icon: Icons.star_rounded,
+          label: 'Auto',
+          onTap: widget.onGroup,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildJapanControlBtn({
+    required IconData icon,
+    required String label,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 66,
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+        decoration: BoxDecoration(
+          color: const Color(0xCC1A0C06),
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: const Color(0x44D4AF37), width: 1.1),
+          boxShadow: const [
+            BoxShadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2)),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: const Color(0xFFFDE047), size: 13),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 10.5,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlowingYourTurnBeacon() {
+    return AnimatedBuilder(
+      animation: _ambientGlowController,
+      builder: (context, _) {
+        final glow = 0.7 + sin(_ambientGlowController.value * 2 * pi) * 0.3;
+        return Container(
+          width: 58,
+          height: 58,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const RadialGradient(
+              colors: [
+                Color(0xFF2A1505),
+                Color(0xFF150A02),
+              ],
+            ),
+            border: Border.all(
+              color: const Color(0xFFFDE047),
+              width: 2.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFDE047).withValues(alpha: 0.65 * glow),
+                blurRadius: 16 * glow,
+                spreadRadius: 2 * glow,
+              ),
+              BoxShadow(
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.45 * glow),
+                blurRadius: 24 * glow,
+                spreadRadius: 3 * glow,
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Your',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  height: 1.1,
+                ),
+              ),
+              Text(
+                'Turn',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  height: 1.1,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildJapanActionBtn() {
+    if (widget.phase == 'OVER') {
+      return _buildJapanPillBtn(
+        label: 'Home',
+        icon: Icons.home_rounded,
+        onTap: widget.onBack,
+      );
+    }
+    if (widget.phase == 'DRAW') {
+      return _buildJapanPillBtn(
+        label: 'Draw',
+        icon: Icons.style_rounded,
+        onTap: widget.canDraw
+            ? () {
+                final drawn = widget.onDrawStock?.call();
+                _triggerDrawAnimation(fromDiscard: false, drawnCard: drawn, onComplete: () {});
+              }
+            : null,
+      );
+    }
+    if (widget.phase == 'DISCARD') {
+      final hasSelected = widget.selectedCardId != null;
+      return _buildJapanPillBtn(
+        label: 'Discard',
+        icon: Icons.upload_rounded,
+        onTap: hasSelected
+            ? () => _triggerDiscardAnimation(onComplete: () => widget.onDiscard?.call())
+            : null,
+      );
+    }
+    if (widget.phase == 'POST') {
+      return _buildJapanPillBtn(
+        label: 'Show ($_showCountdownSeconds s)',
+        icon: Icons.visibility_rounded,
+        onTap: () {
+          _cancelShowCountdown();
+          widget.onShow?.call();
+        },
+      );
+    }
+    return const SizedBox();
+  }
+
+  Widget _buildJapanPillBtn({
+    required String label,
+    required IconData icon,
+    VoidCallback? onTap,
+  }) {
+    final enabled = onTap != null;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: enabled ? const Color(0xDD1A0C06) : const Color(0x551A0C06),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: enabled ? const Color(0xFFFDE047) : const Color(0x33D4AF37),
+            width: 1.2,
+          ),
+          boxShadow: [
+            if (enabled)
+              const BoxShadow(color: Color(0x44FDE047), blurRadius: 10, offset: Offset(0, 2)),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: enabled ? const Color(0xFFFDE047) : Colors.white38, size: 15),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 11.5,
+                fontWeight: FontWeight.w900,
+                color: enabled ? Colors.white : Colors.white38,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTeaBowl() {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: const Color(0xFF1F1209),
+        border: Border.all(color: const Color(0xFF5D4037), width: 1.5),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black54,
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Container(
+          width: 28,
+          height: 28,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: [
+                Color(0xFF3E2723),
+                Color(0xFF1B0000),
+              ],
+            ),
+          ),
+          child: const Center(
+            child: Text(
+              '🌸',
+              style: TextStyle(fontSize: 12),
+            ),
+          ),
         ),
       ),
     );
