@@ -607,19 +607,28 @@ class _PlayAreaTableState extends State<PlayAreaTable>
           ),
         ),
 
-        // Discard blackout: dims everything behind the flying card
+        // Discard blackout: only dims during arc phase (28-80%), fades out before end
         if (_discardingCardInfo != null)
           Positioned.fill(
             child: AnimatedBuilder(
               animation: _discardController,
-              builder: (_, __) => IgnorePointer(
-                child: Container(
-                  color: Colors.black.withValues(
-                    alpha: (Curves.easeInOutCubic.transform(_discardController.value) * 0.62)
-                        .clamp(0.0, 0.62),
+              builder: (_, __) {
+                final t = _discardController.value;
+                // Fade in 0.28→0.50, hold 0.50→0.72, fade out 0.72→1.0
+                double alpha = 0.0;
+                if (t >= 0.28 && t < 0.50) {
+                  alpha = ((t - 0.28) / 0.22) * 0.52;
+                } else if (t >= 0.50 && t < 0.72) {
+                  alpha = 0.52;
+                } else if (t >= 0.72) {
+                  alpha = (1.0 - (t - 0.72) / 0.28) * 0.52;
+                }
+                return IgnorePointer(
+                  child: Container(
+                    color: Colors.black.withValues(alpha: alpha.clamp(0.0, 0.52)),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
 
