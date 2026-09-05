@@ -528,21 +528,18 @@ class _PlayAreaTableState extends State<PlayAreaTable>
 
   @override
   Widget build(BuildContext context) {
-    if (_isJapan) {
-      return _buildJapanPlayArea(context);
-    }
-
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Theme background: image + ambient glow + side panels (Japan/etc.)
+        // Theme background: image + ambient glow
         Positioned.fill(child: PlayAreaBackground(theme: widget.theme)),
 
         SafeArea(
           child: Column(
             children: [
               _buildTopHeader(),
-              _buildSubHeader(),
+              if (!_isJapan) _buildSubHeader(),
+
               // Responsive expanded table area that houses all table elements + hand
               Expanded(
                 child: Stack(
@@ -551,13 +548,28 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                   children: [
                     _buildTableFeltAndPiles(),
                     ..._buildOpponents(),
+
+                    // 1. Right Side Top Column: Sort, Hint, Auto buttons
+                    if (_isJapan)
+                      Positioned(
+                        right: 10,
+                        top: 6,
+                        child: _buildJapanRightControlStack(),
+                      ),
+
+                    // 3. You avatar positioned directly above the cards!
                     _buildYouAvatar(),
+
                     // Deal ceremony card distribution flight layer
                     if (_isDealing) _buildDealCeremonyLayer(),
                   ],
                 ),
               ),
+
+              // 3. Hand area: cards fanning below the You avatar!
               _buildHandArea(),
+
+              // 4. Action bar (Draw, Discard, Show, Pass)
               _buildActionBar(),
             ],
           ),
@@ -571,141 +583,29 @@ class _PlayAreaTableState extends State<PlayAreaTable>
     );
   }
 
-  Widget _buildJapanPlayArea(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final screenHeight = constraints.maxHeight;
-
-        final p1 = widget.players.length > 1 ? widget.players[1] : null;
-        final p2 = widget.players.length > 2 ? widget.players[2] : null;
-        final p3 = widget.players.length > 3 ? widget.players[3] : null;
-
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            // 1. Full Screen Background
-            Positioned.fill(
-              child: Image.asset(
-                'assets/art/play_area_bg_japan.jpg',
-                fit: BoxFit.cover,
-                alignment: Alignment.center,
-              ),
-            ),
-
-            // 2. Top Header Navigation
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: SafeArea(
-                bottom: false,
-                child: _buildTopHeader(),
-              ),
-            ),
-
-            // 3. Top Opponent (Miyu)
-            Positioned(
-              top: screenHeight * 0.09,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildAvatarPill(
-                      player: p1 ?? const PlayAreaPlayer(name: 'Miyu', score: 28, cards: 4, order: 1),
-                      fallbackName: 'Miyu',
-                      asset: 'assets/art/av_japan_miyu.png',
-                      ringColor: const Color(0xFFD4AF37),
-                      order: 1,
-                    ),
-                    const SizedBox(height: 5),
-                    _buildOpponentCards(count: p1?.cards ?? 4, vertical: true),
-                  ],
-                ),
-              ),
-            ),
-
-            // 4. Left Opponent (Hiro)
-            Positioned(
-              left: 16,
-              top: screenHeight * 0.35,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _buildAvatarPill(
-                    player: p2 ?? const PlayAreaPlayer(name: 'Hiro', score: 34, cards: 4, order: 2),
-                    fallbackName: 'Hiro',
-                    asset: 'assets/art/av_japan_hiro.png',
-                    ringColor: const Color(0xFFD4AF37),
-                    order: 2,
-                  ),
-                  const SizedBox(width: 8),
-                  _buildOpponentCards(count: p2?.cards ?? 4, vertical: false),
-                ],
-              ),
-            ),
-
-            // 5. Right Opponent (Kenji)
-            Positioned(
-              right: 16,
-              top: screenHeight * 0.35,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _buildOpponentCards(count: p3?.cards ?? 4, vertical: false),
-                  const SizedBox(width: 8),
-                  _buildAvatarPill(
-                    player: p3 ?? const PlayAreaPlayer(name: 'Kenji', score: 22, cards: 4, order: 3),
-                    fallbackName: 'Kenji',
-                    asset: 'assets/art/av_japan_kenji.png',
-                    ringColor: const Color(0xFFD4AF37),
-                    order: 3,
-                  ),
-                ],
-              ),
-            ),
-
-            // 6. Center Zen Enso Circle: Draw Pile & Discard Pile (Placed directly inside the circle of the image)
-            Positioned(
-              top: screenHeight * 0.38,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _buildDrawDeck(),
-                    const SizedBox(width: 36),
-                    _buildDiscardPile(),
-                  ],
-                ),
-              ),
-            ),
-
-            // 7. Bottom Hand & Controls Area
-            Positioned(
-              bottom: 10,
-              left: 0,
-              right: 0,
-              child: SafeArea(
-                top: false,
-                child: _buildJapanBottomArea(),
-              ),
-            ),
-
-            // Flight animation layers
-            if (_drawController.isAnimating) _buildDrawFlightLayer(),
-            if (_discardingCardInfo != null) _buildDiscardFlightLayer(),
-            if (_opponentController.isAnimating) _buildOpponentFlightLayer(),
-            if (_isDealing) _buildDealCeremonyLayer(),
-          ],
-        );
-      },
+  Widget _buildJapanRightControlStack() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _buildJapanControlBtn(
+          icon: Icons.swap_vert_rounded,
+          label: 'Sort',
+          onTap: widget.onSort,
+        ),
+        const SizedBox(height: 5),
+        _buildJapanControlBtn(
+          icon: Icons.lightbulb_rounded,
+          label: 'Hint',
+          onTap: widget.onHint,
+        ),
+        const SizedBox(height: 5),
+        _buildJapanControlBtn(
+          icon: Icons.star_rounded,
+          label: 'Auto',
+          onTap: widget.onGroup,
+        ),
+      ],
     );
   }
 
@@ -1226,13 +1126,13 @@ class _PlayAreaTableState extends State<PlayAreaTable>
   Widget _buildTableFeltAndPiles() {
     if (_isJapan) {
       return Align(
-        alignment: const Alignment(0.0, 0.08),
+        alignment: const Alignment(0.0, 0.18),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _buildDrawDeck(),
-            const SizedBox(width: 34),
+            const SizedBox(width: 28),
             _buildDiscardPile(),
           ],
         ),
@@ -1641,8 +1541,8 @@ class _PlayAreaTableState extends State<PlayAreaTable>
       final p2 = widget.players[2];
       widgets.add(
         Positioned(
-          left: 10,
-          top: MediaQuery.of(context).size.height * 0.16,
+          left: 8,
+          top: MediaQuery.of(context).size.height * (_isJapan ? 0.12 : 0.16),
           child: Container(
             key: _seatLeftKey,
             child: Row(
@@ -1657,7 +1557,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                   order: 2,
                 ),
                 if (_isJapan) ...[
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 4),
                   _buildOpponentCards(count: p2.cards, vertical: false),
                 ],
               ],
@@ -1671,8 +1571,8 @@ class _PlayAreaTableState extends State<PlayAreaTable>
       final p3 = widget.players[3];
       widgets.add(
         Positioned(
-          right: 10,
-          top: MediaQuery.of(context).size.height * 0.16,
+          right: 8,
+          top: MediaQuery.of(context).size.height * (_isJapan ? 0.12 : 0.16),
           child: Container(
             key: _seatRightKey,
             child: Row(
@@ -1681,7 +1581,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
               children: [
                 if (_isJapan) ...[
                   _buildOpponentCards(count: p3.cards, vertical: false),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 4),
                 ],
                 _buildAvatarPill(
                   player: p3,
@@ -1847,7 +1747,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
 
   Widget _buildYouAvatar() {
     final you = widget.players.isNotEmpty ? widget.players[0] : null;
-    final avatarAsset = you?.avatarAsset ?? 'assets/art/avatar_01.png';
+    final avatarAsset = _isJapan ? 'assets/art/av_japan_hiro.png' : (you?.avatarAsset ?? 'assets/art/avatar_01.png');
     final currentScore = _calculateHandScore(widget.hand);
     final countAfterDiscard = (widget.selectedCardId != null && widget.phase == 'DISCARD')
         ? _calculateHandScore(widget.hand.where((c) => c.id != widget.selectedCardId).toList())
@@ -1864,11 +1764,11 @@ class _PlayAreaTableState extends State<PlayAreaTable>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: const Color(0xFFFDE047), width: 2.2),
-              boxShadow: [
+              boxShadow: const [
                 BoxShadow(
-                  color: const Color(0xFFFDE047).withValues(alpha: 0.6),
-                  blurRadius: 12,
-                  spreadRadius: 1.5,
+                  color: Color(0x99FDE047),
+                  blurRadius: 14,
+                  spreadRadius: 1.8,
                 ),
               ],
             ),
@@ -1877,14 +1777,17 @@ class _PlayAreaTableState extends State<PlayAreaTable>
           const SizedBox(height: 3),
 
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2.5),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 2.5),
             decoration: BoxDecoration(
-              color: const Color(0xDD09031E),
+              color: _isJapan ? const Color(0xEE140A06) : const Color(0xDD09031E),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: const Color(0x33FDE047),
-                width: 1,
+                color: _isJapan ? const Color(0x66D4AF37) : const Color(0x33FDE047),
+                width: 1.1,
               ),
+              boxShadow: const [
+                BoxShadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 2)),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1936,15 +1839,14 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                         ),
                       ),
                     ] else ...[
-                      AnimatedDefaultTextStyle(
-                        duration: const Duration(milliseconds: 250),
+                      Text(
+                        '$currentScore',
                         style: TextStyle(
                           fontFamily: 'Nunito',
-                          fontSize: 9.5,
+                          fontSize: 10,
                           fontWeight: FontWeight.w900,
                           color: _scoreColor,
                         ),
-                        child: Text('$currentScore'),
                       ),
                     ],
                   ],
@@ -2684,8 +2586,21 @@ class _PlayAreaTableState extends State<PlayAreaTable>
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 2, 16, 12),
-      child: content,
+      padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          if (_isJapan && widget.isMyTurn) ...[
+            _buildGlowingYourTurnBeacon(),
+            const SizedBox(width: 8),
+          ],
+          Expanded(child: content),
+          if (_isJapan) ...[
+            const SizedBox(width: 8),
+            _buildTeaBowl(),
+          ],
+        ],
+      ),
     );
   }
 
@@ -2751,184 +2666,28 @@ class _PlayAreaTableState extends State<PlayAreaTable>
   // -------------------------------------------------------------------------
 
   Widget _buildOpponentCards({required int count, required bool vertical}) {
-    final c = 4;
+    final c = count.clamp(1, 4);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         for (var i = 0; i < c; i++)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 1.5),
+            padding: const EdgeInsets.symmetric(horizontal: 1),
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(3),
                 boxShadow: const [
                   BoxShadow(color: Colors.black54, blurRadius: 4, offset: Offset(0, 2)),
                 ],
               ),
-              child: const ZcCardBackWidget(backId: 'cb_sakura', width: 26),
+              child: const ZcCardBackWidget(backId: 'cb_sakura', width: 22),
             ),
           ),
       ],
     );
   }
 
-  Widget _buildJapanBottomArea() {
-    final currentScore = _calculateHandScore(widget.hand);
-    final countAfterDiscard = (widget.selectedCardId != null && widget.phase == 'DISCARD')
-        ? _calculateHandScore(widget.hand.where((c) => c.id != widget.selectedCardId).toList())
-        : null;
 
-    final cardList = [
-      for (final c in widget.hand)
-        (id: c.id, rank: c.rank, suit: c.suit, value: c.value, isSpecial: c.isSpecial)
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // Left control buttons stack [Sort, Hint, Auto]
-          _buildJapanLeftControlStack(),
-          const SizedBox(width: 8),
-
-          // You avatar with glowing halo and score pill
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFFDE047), width: 2.2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x99FDE047),
-                      blurRadius: 14,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: ClipOval(
-                  child: _avatarWidget(
-                    _isJapan
-                        ? 'assets/art/av_japan_hiro.png'
-                        : (widget.players.isNotEmpty ? widget.players[0].avatarAsset : null),
-                    48,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 3),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2.5),
-                decoration: BoxDecoration(
-                  color: const Color(0xEE140A06),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0x66D4AF37), width: 1.1),
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 3)),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'You',
-                      style: TextStyle(
-                        fontFamily: 'Nunito',
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      countAfterDiscard != null ? '$countAfterDiscard' : (currentScore > 0 ? '$currentScore' : '16'),
-                      style: const TextStyle(
-                        fontFamily: 'Nunito',
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(width: 6),
-
-          // Center: Player's hand of cards
-          Expanded(
-            child: Center(
-              child: ZcCardFan(
-                key: const Key('playerHand'),
-                cards: cardList,
-                cardWidth: 44,
-                overlap: 0.64,
-                enableGrouping: widget.grouping,
-                selectedCardId: widget.selectedCardId,
-                onCardTap: (id) {
-                  if (widget.isMyTurn && (widget.phase == 'DISCARD' || widget.phase == 'DRAW')) {
-                    widget.onCardTap?.call(id);
-                  }
-                },
-              ),
-            ),
-          ),
-
-          const SizedBox(width: 6),
-
-          // Right: Glowing "Your Turn" beacon / Action Button / Tea Bowl
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (widget.isMyTurn) ...[
-                _buildGlowingYourTurnBeacon(),
-                const SizedBox(height: 4),
-              ],
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildJapanActionBtn(),
-                  const SizedBox(width: 4),
-                  _buildTeaBowl(),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildJapanLeftControlStack() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildJapanControlBtn(
-          icon: Icons.swap_vert_rounded,
-          label: 'Sort',
-          onTap: widget.onSort,
-        ),
-        const SizedBox(height: 5),
-        _buildJapanControlBtn(
-          icon: Icons.lightbulb_rounded,
-          label: 'Hint',
-          onTap: widget.onHint,
-        ),
-        const SizedBox(height: 5),
-        _buildJapanControlBtn(
-          icon: Icons.star_rounded,
-          label: 'Auto',
-          onTap: widget.onGroup,
-        ),
-      ],
-    );
-  }
 
   Widget _buildJapanControlBtn({
     required IconData icon,
@@ -2975,8 +2734,8 @@ class _PlayAreaTableState extends State<PlayAreaTable>
       builder: (context, _) {
         final glow = 0.7 + sin(_ambientGlowController.value * 2 * pi) * 0.3;
         return Container(
-          width: 58,
-          height: 58,
+          width: 42,
+          height: 42,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: const RadialGradient(
@@ -2987,18 +2746,18 @@ class _PlayAreaTableState extends State<PlayAreaTable>
             ),
             border: Border.all(
               color: const Color(0xFFFDE047),
-              width: 2.2,
+              width: 1.8,
             ),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFFFDE047).withValues(alpha: 0.65 * glow),
-                blurRadius: 16 * glow,
-                spreadRadius: 2 * glow,
+                blurRadius: 12 * glow,
+                spreadRadius: 1.5 * glow,
               ),
               BoxShadow(
                 color: const Color(0xFFF59E0B).withValues(alpha: 0.45 * glow),
-                blurRadius: 24 * glow,
-                spreadRadius: 3 * glow,
+                blurRadius: 18 * glow,
+                spreadRadius: 2 * glow,
               ),
             ],
           ),
@@ -3010,20 +2769,20 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                 'Your',
                 style: TextStyle(
                   fontFamily: 'Nunito',
-                  fontSize: 11,
+                  fontSize: 9,
                   fontWeight: FontWeight.w900,
                   color: Colors.white,
-                  height: 1.1,
+                  height: 1.0,
                 ),
               ),
               Text(
                 'Turn',
                 style: TextStyle(
                   fontFamily: 'Nunito',
-                  fontSize: 11,
+                  fontSize: 9,
                   fontWeight: FontWeight.w900,
                   color: Colors.white,
-                  height: 1.1,
+                  height: 1.0,
                 ),
               ),
             ],
@@ -3033,111 +2792,26 @@ class _PlayAreaTableState extends State<PlayAreaTable>
     );
   }
 
-  Widget _buildJapanActionBtn() {
-    if (widget.phase == 'OVER') {
-      return _buildJapanPillBtn(
-        label: 'Home',
-        icon: Icons.home_rounded,
-        onTap: widget.onBack,
-      );
-    }
-    if (widget.phase == 'DRAW') {
-      return _buildJapanPillBtn(
-        label: 'Draw',
-        icon: Icons.style_rounded,
-        onTap: widget.canDraw
-            ? () {
-                final drawn = widget.onDrawStock?.call();
-                _triggerDrawAnimation(fromDiscard: false, drawnCard: drawn, onComplete: () {});
-              }
-            : null,
-      );
-    }
-    if (widget.phase == 'DISCARD') {
-      final hasSelected = widget.selectedCardId != null;
-      return _buildJapanPillBtn(
-        label: 'Discard',
-        icon: Icons.upload_rounded,
-        onTap: hasSelected
-            ? () => _triggerDiscardAnimation(onComplete: () => widget.onDiscard?.call())
-            : null,
-      );
-    }
-    if (widget.phase == 'POST') {
-      return _buildJapanPillBtn(
-        label: 'Show ($_showCountdownSeconds s)',
-        icon: Icons.visibility_rounded,
-        onTap: () {
-          _cancelShowCountdown();
-          widget.onShow?.call();
-        },
-      );
-    }
-    return const SizedBox();
-  }
-
-  Widget _buildJapanPillBtn({
-    required String label,
-    required IconData icon,
-    VoidCallback? onTap,
-  }) {
-    final enabled = onTap != null;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: enabled ? const Color(0xDD1A0C06) : const Color(0x551A0C06),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: enabled ? const Color(0xFFFDE047) : const Color(0x33D4AF37),
-            width: 1.2,
-          ),
-          boxShadow: [
-            if (enabled)
-              const BoxShadow(color: Color(0x44FDE047), blurRadius: 10, offset: Offset(0, 2)),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: enabled ? const Color(0xFFFDE047) : Colors.white38, size: 15),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Nunito',
-                fontSize: 11.5,
-                fontWeight: FontWeight.w900,
-                color: enabled ? Colors.white : Colors.white38,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildTeaBowl() {
     return Container(
-      width: 40,
-      height: 40,
+      width: 36,
+      height: 36,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: const Color(0xFF1F1209),
-        border: Border.all(color: const Color(0xFF5D4037), width: 1.5),
+        border: Border.all(color: const Color(0xFF5D4037), width: 1.2),
         boxShadow: const [
           BoxShadow(
             color: Colors.black54,
-            blurRadius: 6,
+            blurRadius: 5,
             offset: Offset(0, 2),
           ),
         ],
       ),
       child: Center(
         child: Container(
-          width: 28,
-          height: 28,
+          width: 24,
+          height: 24,
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
             gradient: RadialGradient(
@@ -3150,7 +2824,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
           child: const Center(
             child: Text(
               '🌸',
-              style: TextStyle(fontSize: 12),
+              style: TextStyle(fontSize: 10),
             ),
           ),
         ),
