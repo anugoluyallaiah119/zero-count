@@ -258,9 +258,9 @@ class _StoreHeader extends ConsumerWidget {
                 ),
                 SizedBox(height: 2),
                 Text(
-                  'Enhance your experience. Stand out in every game.',
+                  'Enhance your game',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 10.5,
                     color: LcColors.textMuted,
                     fontWeight: FontWeight.w600,
                   ),
@@ -537,7 +537,7 @@ class _PowerYourGameBanner extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: Container(
-        height: 160,
+        height: 184,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
@@ -582,13 +582,13 @@ class _PowerYourGameBanner extends StatelessWidget {
             ),
             // Text content — constrained to left 60% so it doesn't touch image
             Positioned(
-              left: 16,
-              top: 14,
-              right: 130,
-              bottom: 14,
+              left: 14,
+              top: 12,
+              right: 125,
+              bottom: 12,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -606,27 +606,24 @@ class _PowerYourGameBanner extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
                   const Text(
                     'Power Your\nGame',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 19,
                       fontWeight: FontWeight.w900,
                       color: LcColors.textDark,
                       height: 1.1,
                     ),
                   ),
-                  const SizedBox(height: 5),
                   const Text(
                     'Coins for matches.\nGems for premium rewards.',
                     style: TextStyle(
                       color: LcColors.textMuted,
-                      fontSize: 10.5,
+                      fontSize: 10,
                       fontWeight: FontWeight.w600,
-                      height: 1.35,
+                      height: 1.25,
                     ),
                   ),
-                  const SizedBox(height: 10),
                   Row(
                     children: [
                       Expanded(
