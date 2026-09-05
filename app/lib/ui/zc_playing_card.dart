@@ -98,22 +98,20 @@ class ZcPlayingCard extends StatelessWidget {
     );
     final starColor = skin?.starColor ?? const Color(0xFF2EEA6A);
     final specialLabel = skin?.label ?? '★';
-    final normalGradient = const LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [Color(0xFFFFFFFF), Color(0xFFF8F7FA)],
-    );
-
     final Widget faceContent = faceDown
         ? ZcCardBackWidget(backId: cardBackId, width: width)
         : Container(
-            padding: EdgeInsets.fromLTRB(width * 0.08, width * 0.07, width * 0.08, width * 0.07),
             decoration: BoxDecoration(
-              gradient: isSpecial ? specialGradient : normalGradient,
+              color: isSpecial ? null : Colors.white,
+              gradient: isSpecial ? specialGradient : null,
               borderRadius: BorderRadius.circular(radius),
               border: Border.all(
-                color: selected ? const Color(0xFFFDE047) : (isSpecial ? skin?.glowColor ?? const Color(0xFFD946CB) : const Color(0xFFD6CEE5)),
-                width: selected ? 2.4 : 1.6,
+                color: selected
+                    ? const Color(0xFFFDE047)
+                    : isSpecial
+                        ? (skin?.glowColor ?? const Color(0xFFD946CB))
+                        : const Color(0xFFCBC8D4),
+                width: selected ? 2.2 : 1.2,
               ),
               boxShadow: [
                 if (selected) ...[
@@ -129,92 +127,141 @@ class ZcPlayingCard extends StatelessWidget {
                   ),
                 ] else
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    blurRadius: 5,
-                    offset: const Offset(0, 2.5),
+                    color: Colors.black.withValues(alpha: 0.30),
+                    blurRadius: 6,
+                    spreadRadius: 0.5,
+                    offset: const Offset(0, 3),
                   ),
               ],
             ),
-            child: Stack(
-              children: [
-                // Top-Left: Rank + Small Suit (or ★ for specials)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      isSpecial ? specialLabel : rank,
-                      style: TextStyle(
-                        fontSize: width * 0.30,
-                        fontWeight: FontWeight.w900,
-                        color: isSpecial ? starColor : suit.color,
-                        height: 1.0,
-                        fontFamily: 'Nunito',
-                      ),
-                    ),
-                    const SizedBox(height: 1),
-                    if (!isSpecial) SuitIcon(suit, width: width * 0.22),
-                  ],
-                ),
-
-                // Large Center Suit Emblem (or glowing ★ for specials)
-                Center(
-                  child: isSpecial
-                      ? Text(
-                          specialLabel,
-                          style: TextStyle(
-                            fontSize: width * 0.56,
-                            fontWeight: FontWeight.w900,
-                            color: starColor,
-                            height: 1.0,
-                            shadows: [
-                              Shadow(
+            child: isSpecial
+                // ── Special card layout (unchanged) ──────────────────────
+                ? Padding(
+                    padding: EdgeInsets.fromLTRB(
+                        width * 0.08, width * 0.07, width * 0.08, width * 0.07),
+                    child: Stack(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              specialLabel,
+                              style: TextStyle(
+                                fontSize: width * 0.30,
+                                fontWeight: FontWeight.w900,
                                 color: starColor,
-                                blurRadius: 12,
+                                height: 1.0,
+                                fontFamily: 'Nunito',
                               ),
-                            ],
+                            ),
+                          ],
+                        ),
+                        Center(
+                          child: Text(
+                            specialLabel,
+                            style: TextStyle(
+                              fontSize: width * 0.56,
+                              fontWeight: FontWeight.w900,
+                              color: starColor,
+                              height: 1.0,
+                              shadows: [Shadow(color: starColor, blurRadius: 12)],
+                            ),
                           ),
-                        )
-                      : SuitIcon(suit, width: width * 0.46),
-                ),
-
-                // Bottom-Right: Point Value Badge (A=1, 2..10, J/Q/K=10)
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: width * 0.33,
-                    height: width * 0.33,
-                    decoration: BoxDecoration(
-                      color: selected ? const Color(0xFFFDE047) : const Color(0xFF1E1B4B),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: selected ? const Color(0xFFB45309) : const Color(0x40FFFFFF),
-                        width: 0.8,
-                      ),
-                      boxShadow: [
-                        if (selected)
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.4),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
+                        ),
+                        // Bottom-right value badge for specials
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: width * 0.33,
+                            height: width * 0.33,
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? const Color(0xFFFDE047)
+                                  : const Color(0xFF1E1B4B),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: selected
+                                      ? const Color(0xFFB45309)
+                                      : const Color(0x40FFFFFF),
+                                  width: 0.8),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'S',
+                              style: TextStyle(
+                                fontSize: width * 0.18,
+                                fontWeight: FontWeight.w900,
+                                color: selected
+                                    ? const Color(0xFF1E1B4B)
+                                    : const Color(0xFFFDE047),
+                                fontFamily: 'Nunito',
+                              ),
+                            ),
                           ),
+                        ),
                       ],
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      isSpecial ? 'S' : '$value',
-                      style: TextStyle(
-                        fontSize: width * 0.18,
-                        fontWeight: FontWeight.w900,
-                        color: selected ? const Color(0xFF1E1B4B) : const Color(0xFFFDE047),
-                        fontFamily: 'Nunito',
+                  )
+                // ── Standard card — clean physical layout ─────────────────
+                : Stack(
+                    children: [
+                      // Top-left corner: rank + suit
+                      Positioned(
+                        top: width * 0.07,
+                        left: width * 0.08,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              rank,
+                              style: TextStyle(
+                                fontSize: width * 0.285,
+                                fontWeight: FontWeight.w900,
+                                color: suit.color,
+                                height: 1.0,
+                                fontFamily: 'Nunito',
+                              ),
+                            ),
+                            SuitIcon(suit, width: width * 0.20),
+                          ],
+                        ),
                       ),
-                    ),
+
+                      // Center: large suit pip
+                      Center(
+                        child: SuitIcon(suit, width: width * 0.48),
+                      ),
+
+                      // Bottom-right corner: rank + suit rotated 180°
+                      Positioned(
+                        bottom: width * 0.07,
+                        right: width * 0.08,
+                        child: Transform.rotate(
+                          angle: 3.14159,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                rank,
+                                style: TextStyle(
+                                  fontSize: width * 0.285,
+                                  fontWeight: FontWeight.w900,
+                                  color: suit.color,
+                                  height: 1.0,
+                                  fontFamily: 'Nunito',
+                                ),
+                              ),
+                              SuitIcon(suit, width: width * 0.20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
           );
 
     final cardWidget = AnimatedContainer(
