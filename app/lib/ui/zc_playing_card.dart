@@ -204,12 +204,12 @@ class ZcPlayingCard extends StatelessWidget {
                       ],
                     ),
                   )
-                // ── Standard card — clean physical layout ─────────────────
+                // ── Standard card — clean physical layout with value badge ─
                 : Stack(
                     children: [
                       // Top-left corner: rank + suit
                       Positioned(
-                        top: width * 0.07,
+                        top: width * 0.08,
                         left: width * 0.08,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -232,31 +232,47 @@ class ZcPlayingCard extends StatelessWidget {
 
                       // Center: large suit pip
                       Center(
-                        child: SuitIcon(suit, width: width * 0.48),
+                        child: SuitIcon(suit, width: width * 0.46),
                       ),
 
-                      // Bottom-right corner: rank + suit rotated 180°
+                      // Bottom-right corner: Point value badge (A=1, 2..10, J/Q/K=10)
                       Positioned(
-                        bottom: width * 0.07,
-                        right: width * 0.08,
-                        child: Transform.rotate(
-                          angle: 3.14159,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                rank,
-                                style: TextStyle(
-                                  fontSize: width * 0.285,
-                                  fontWeight: FontWeight.w900,
-                                  color: suit.color,
-                                  height: 1.0,
-                                  fontFamily: 'Nunito',
+                        right: width * 0.06,
+                        bottom: width * 0.06,
+                        child: Container(
+                          width: width * 0.33,
+                          height: width * 0.33,
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? const Color(0xFFFDE047)
+                                : const Color(0xFF1E1B4B),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: selected
+                                  ? const Color(0xFFB45309)
+                                  : const Color(0x40FFFFFF),
+                              width: 0.8,
+                            ),
+                            boxShadow: [
+                              if (selected)
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.4),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
                                 ),
-                              ),
-                              SuitIcon(suit, width: width * 0.20),
                             ],
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '$value',
+                            style: TextStyle(
+                              fontSize: width * 0.18,
+                              fontWeight: FontWeight.w900,
+                              color: selected
+                                  ? const Color(0xFF1E1B4B)
+                                  : const Color(0xFFFDE047),
+                              fontFamily: 'Nunito',
+                            ),
                           ),
                         ),
                       ),
