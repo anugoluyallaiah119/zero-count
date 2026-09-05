@@ -56,8 +56,8 @@ class PlayAreaTheme {
     id: 'sakuraJapan',
     name: 'Sakura Japan',
     subtitle: 'Cherry Blossoms & Mount Fuji',
-    backgroundAsset: 'assets/art/th_sakura_garden.png',
-    bannerAsset: 'assets/art/th_sakura_garden.png',
+    backgroundAsset: 'assets/art/play_area_bg_japan.jpg',
+    bannerAsset: 'assets/art/play_area_bg_japan.jpg',
     cardBackAsset: 'assets/art/cb_sakura.png',
     tableGradient: [Color(0xFF1A0A0A), Color(0xFF2D0F0F)],
     borderColor: Color(0xFFE8A4B8),
@@ -66,7 +66,7 @@ class PlayAreaTheme {
     avatarSlots: [AvatarSlot.topCenter, AvatarSlot.left, AvatarSlot.right],
     showInfoPanels: false,
     showHintGroup: false,
-    showSidePanels: true,
+    showSidePanels: false,
   );
 
   /// 1. Brazilian Carnival Theme (Rio de Janeiro Copacabana & Corcovado Night)

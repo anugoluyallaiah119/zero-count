@@ -11,6 +11,15 @@ import 'play_area_theme.dart';
 
 /// Renders an avatar from either a ZcAvatars id (av_*) or a legacy asset path.
 Widget _avatarWidget(String? assetOrId, double size) {
+  if (assetOrId != null && (assetOrId.startsWith('assets/') || assetOrId.endsWith('.png') || assetOrId.endsWith('.jpg'))) {
+    return Image.asset(
+      assetOrId,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => ZcAvatars.forId('av_default', size),
+    );
+  }
   if (assetOrId != null && assetOrId.startsWith('av_')) {
     return ZcAvatars.forId(assetOrId, size);
   }
@@ -1431,7 +1440,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                 _buildAvatarPill(
                   player: p1,
                   fallbackName: _isJapan ? 'Miyu' : 'Rahul',
-                  asset: p1.avatarAsset ?? 'assets/art/play_area_avatar_1.png',
+                  asset: _isJapan ? 'assets/art/av_japan_miyu.png' : (p1.avatarAsset ?? 'assets/art/play_area_avatar_1.png'),
                   ringColor: _isJapan ? const Color(0xFFD4AF37) : const Color(0xFFC084FC),
                   order: 1,
                 ),
@@ -1461,7 +1470,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                 _buildAvatarPill(
                   player: p2,
                   fallbackName: _isJapan ? 'Hiro' : 'Sneha',
-                  asset: p2.avatarAsset ?? 'assets/art/play_area_avatar_2.png',
+                  asset: _isJapan ? 'assets/art/av_japan_hiro.png' : (p2.avatarAsset ?? 'assets/art/play_area_avatar_2.png'),
                   ringColor: _isJapan ? const Color(0xFFD4AF37) : const Color(0xFF38BDF8),
                   order: 2,
                 ),
@@ -1495,7 +1504,7 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                 _buildAvatarPill(
                   player: p3,
                   fallbackName: _isJapan ? 'Kenji' : 'Karan',
-                  asset: p3.avatarAsset ?? 'assets/art/play_area_avatar_3.png',
+                  asset: _isJapan ? 'assets/art/av_japan_kenji.png' : (p3.avatarAsset ?? 'assets/art/play_area_avatar_3.png'),
                   ringColor: _isJapan ? const Color(0xFFD4AF37) : const Color(0xFFF59E0B),
                   order: 3,
                 ),
@@ -2636,7 +2645,9 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                 ),
                 child: ClipOval(
                   child: _avatarWidget(
-                    widget.players.isNotEmpty ? widget.players[0].avatarAsset : null,
+                    _isJapan
+                        ? 'assets/art/av_japan_takeda.png'
+                        : (widget.players.isNotEmpty ? widget.players[0].avatarAsset : null),
                     48,
                   ),
                 ),

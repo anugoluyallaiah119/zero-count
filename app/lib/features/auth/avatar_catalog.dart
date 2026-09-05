@@ -21,6 +21,10 @@ const kAvatars = <AvatarOption>[
   AvatarOption('fedora', 'assets/art/avatar_08.png'),
   AvatarOption('astronaut', 'assets/art/avatar_09.png'),
   AvatarOption('tiger', 'assets/art/avatar_10.png'),
+  AvatarOption('japan_hiro', 'assets/art/av_japan_hiro.png'),
+  AvatarOption('japan_miyu', 'assets/art/av_japan_miyu.png'),
+  AvatarOption('japan_kenji', 'assets/art/av_japan_kenji.png'),
+  AvatarOption('japan_takeda', 'assets/art/av_japan_takeda.png'),
 ];
 
 /// Legacy V1 id → V2 asset mapping.
@@ -31,6 +35,10 @@ const _legacy = <String, String>{
   'bolt': 'assets/art/avatar_05.png',
   'crown': 'assets/art/avatar_08.png',
   'rocket': 'assets/art/avatar_09.png',
+  'hiro': 'assets/art/av_japan_hiro.png',
+  'miyu': 'assets/art/av_japan_miyu.png',
+  'kenji': 'assets/art/av_japan_kenji.png',
+  'takeda': 'assets/art/av_japan_takeda.png',
 };
 
 /// Resolve a stored avatar id to its art asset (defaults to the first).
