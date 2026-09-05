@@ -534,79 +534,95 @@ class CollectionGridCard extends ConsumerWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 6),
-            if (showOwnedBadge && item.owned)
+            const SizedBox(height: 4),
+            if (showOwnedBadge && item.owned && !item.equipped)
               Padding(
-                padding: const EdgeInsets.only(bottom: 3),
+                padding: const EdgeInsets.only(bottom: 2),
                 child: const FittedBox(
+                  fit: BoxFit.scaleDown,
                   child: Row(
-                  children: [
-                    Icon(Icons.check_circle_rounded,
-                        color: LcColors.purple, size: 12),
-                    SizedBox(width: 3),
-                    Text('Owned',
-                        style: TextStyle(
-                            color: LcColors.textDark,
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w600)),
-                  ],
+                    children: [
+                      Icon(Icons.check_circle_rounded,
+                          color: LcColors.purple, size: 11),
+                      SizedBox(width: 3),
+                      Text('Owned',
+                          style: TextStyle(
+                              color: LcColors.textDark,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600)),
+                    ],
                   ),
                 ),
               ),
             Text(item.name,
-                style: ZcText.body(11).copyWith(
-                    color: LcColors.textDark, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                    color: LcColors.textDark,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             if (item.equipped)
               // Green Equipped chip — matches mockup
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check_circle_rounded,
-                        color: Colors.white, size: 10),
-                    SizedBox(width: 3),
-                    Text('Equipped',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900)),
-                  ],
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_rounded,
+                          color: Colors.white, size: 9),
+                      SizedBox(width: 2.5),
+                      Text('Equipped',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w900)),
+                    ],
+                  ),
                 ),
               )
             else if (!item.owned && item.price != null)
               // Price pill with coin icon — matches mockup
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset('assets/art/coin.png',
-                      width: 12,
-                      height: 12,
-                      errorBuilder: (_, __, ___) => const Icon(
-                          Icons.monetization_on_rounded,
-                          size: 12,
-                          color: Color(0xFFF59E0B))),
-                  const SizedBox(width: 3),
-                  Text(
-                    item.price == 0
-                        ? 'FREE'
-                        : '${(item.price! / 100).round()}',
-                    style: const TextStyle(
-                        color: LcColors.textDark,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900),
-                  ),
-                ],
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset('assets/art/coin.png',
+                        width: 11,
+                        height: 11,
+                        errorBuilder: (_, __, ___) => const Icon(
+                            Icons.monetization_on_rounded,
+                            size: 11,
+                            color: Color(0xFFF59E0B))),
+                    const SizedBox(width: 3),
+                    Text(
+                      item.price == 0
+                          ? 'FREE'
+                          : '${(item.price! / 100).round()}',
+                      style: const TextStyle(
+                          color: LcColors.textDark,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900),
+                    ),
+                  ],
+                ),
               )
             else
-              RarityChip(rarity: item.rarity),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: RarityChip(rarity: item.rarity),
+              ),
           ],
         ),
       ),

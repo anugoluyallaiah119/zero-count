@@ -185,7 +185,7 @@ class _CollectionGridScreenState
               crossAxisCount: c.crossAxisCount,
               mainAxisSpacing: 9,
               crossAxisSpacing: 9,
-              childAspectRatio: _childAspect(),
+              childAspectRatio: _childAspect(context),
             ),
             itemCount: items.length,
             itemBuilder: (context, i) => CollectionGridCard(
@@ -206,13 +206,12 @@ class _CollectionGridScreenState
     );
   }
 
-  double _childAspect() {
-    // card height ≈ artHeight + ~56 for texts
-    // width = (screenW - 28 - (n-1)*9)/n ; solve at 426 logical width.
-    const w = 426.0;
-    final cellW = (w - 28 - (c.crossAxisCount - 1) * 9) / c.crossAxisCount;
+  double _childAspect(BuildContext context) {
+    final screenW = MediaQuery.sizeOf(context).width;
+    final contentW = (screenW > 0 ? screenW : 390.0).clamp(320.0, 500.0) - 28;
+    final cellW = (contentW - (c.crossAxisCount - 1) * 9) / c.crossAxisCount;
     final artH = cellW / c.artAspect;
-    final extra = c.showOwnedBadge ? 74.0 : 58.0;
+    final extra = c.showOwnedBadge ? 78.0 : 62.0;
     return cellW / (artH + extra);
   }
 
