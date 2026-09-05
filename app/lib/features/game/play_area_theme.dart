@@ -31,6 +31,7 @@ class PlayAreaTheme {
     required this.avatarSlots,
     required this.showInfoPanels,
     required this.showHintGroup,
+    this.showSidePanels = false,
   });
 
   final String id;
@@ -47,6 +48,26 @@ class PlayAreaTheme {
   final List<AvatarSlot> avatarSlots;
   final bool showInfoPanels;
   final bool showHintGroup;
+  // Japan theme: shows left scroll + right lantern/bamboo decorations
+  final bool showSidePanels;
+
+  /// 0. Sakura Japan Theme (Mount Fuji + Cherry Blossoms + Tatami Table)
+  static const sakuraJapan = PlayAreaTheme(
+    id: 'sakuraJapan',
+    name: 'Sakura Japan',
+    subtitle: 'Cherry Blossoms & Mount Fuji',
+    backgroundAsset: 'assets/art/th_sakura_garden.png',
+    bannerAsset: 'assets/art/th_sakura_garden.png',
+    cardBackAsset: 'assets/art/cb_sakura.png',
+    tableGradient: [Color(0xFF1A0A0A), Color(0xFF2D0F0F)],
+    borderColor: Color(0xFFE8A4B8),
+    borderGlow: Color(0xFFFF6B9D),
+    accent: Color(0xFFFFD4E8),
+    avatarSlots: [AvatarSlot.topCenter, AvatarSlot.left, AvatarSlot.right],
+    showInfoPanels: false,
+    showHintGroup: false,
+    showSidePanels: true,
+  );
 
   /// 1. Brazilian Carnival Theme (Rio de Janeiro Copacabana & Corcovado Night)
   static const brazilCarnival = PlayAreaTheme(
@@ -103,6 +124,7 @@ class PlayAreaTheme {
   );
 
   static const List<PlayAreaTheme> all = [
+    sakuraJapan,
     brazilCarnival,
     mysticGarden,
     neonCyber,

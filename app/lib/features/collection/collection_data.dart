@@ -99,7 +99,7 @@ class CollectionCatalog {
     CollectionItem(
         id: 'th_brazil_carnival',
         name: 'Brazil Carnival',
-        asset: 'assets/art/home_brazil_banner.png',
+        asset: 'assets/art/play_area_bg_brazil.jpg',
         rarity: ZcRarity.legendary,
         subtitle: 'Rio de Janeiro Night. Feel the rhythm of Carnival.',
         owned: true,
@@ -113,10 +113,10 @@ class CollectionCatalog {
         owned: true),
     CollectionItem(
         id: 'th_sakura',
-        name: 'Sakura Calm',
+        name: 'Sakura Japan',
         asset: 'assets/art/th_sakura_garden.png',
-        rarity: ZcRarity.epic,
-        subtitle: 'Peaceful vibes for a clear mind.',
+        rarity: ZcRarity.legendary,
+        subtitle: 'Mount Fuji. Cherry blossoms. One hand changes everything.',
         owned: true),
     CollectionItem(
         id: 'th_desert',

@@ -559,6 +559,24 @@ class _PlayAreaTableState extends State<PlayAreaTable>
           ),
         ),
 
+        // Japan theme: left scroll panel "雅 / ZERO COUNT" + right bamboo panel
+        if (widget.theme.showSidePanels) ...[
+          Positioned(
+            left: 0,
+            top: 60,
+            bottom: 120,
+            width: 52,
+            child: _buildJapanLeftPanel(),
+          ),
+          Positioned(
+            right: 0,
+            top: 60,
+            bottom: 120,
+            width: 52,
+            child: _buildJapanRightPanel(),
+          ),
+        ],
+
         SafeArea(
           child: Column(
             children: [
@@ -947,6 +965,129 @@ class _PlayAreaTableState extends State<PlayAreaTable>
   // 3. 3D Game Table Felt + Center Piles + Active Player Ambient Glow Sweep (Req 4)
   // -------------------------------------------------------------------------
 
+  // -------------------------------------------------------------------------
+  // Japan Side Panels (left scroll + right bamboo/lantern)
+  // -------------------------------------------------------------------------
+
+  Widget _buildJapanLeftPanel() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xCC1A0800),
+        borderRadius: const BorderRadius.horizontal(right: Radius.circular(10)),
+        border: Border.all(color: const Color(0x44E8A4B8), width: 0.8),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Scroll-style top divider
+          Container(height: 1, color: const Color(0x88E8A4B8)),
+          const SizedBox(height: 12),
+          // 雅 kanji (elegance)
+          const Text(
+            '雅',
+            style: TextStyle(
+              fontFamily: 'Nunito',
+              fontSize: 26,
+              color: Color(0xFFE8A4B8),
+              fontWeight: FontWeight.w900,
+              height: 1.0,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(width: 24, height: 1, color: const Color(0x66E8A4B8)),
+          const SizedBox(height: 10),
+          // ZERO COUNT vertical text
+          ...['Z','E','R','O','','C','O','U','N','T'].map(
+            (c) => Text(
+              c,
+              style: const TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 8,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5,
+                color: Color(0xCCFFD4E8),
+                height: 1.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(height: 1, color: const Color(0x88E8A4B8)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildJapanRightPanel() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xCC1A0800),
+        borderRadius: const BorderRadius.horizontal(left: Radius.circular(10)),
+        border: Border.all(color: const Color(0x44E8A4B8), width: 0.8),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(height: 1, color: const Color(0x88E8A4B8)),
+          const SizedBox(height: 12),
+          // 和 kanji (harmony) in lantern style
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xAACC2200),
+              border: Border.all(color: const Color(0x88FF6B9D), width: 1),
+            ),
+            alignment: Alignment.center,
+            child: const Text(
+              '和',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                height: 1.0,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(width: 24, height: 1, color: const Color(0x66E8A4B8)),
+          const SizedBox(height: 10),
+          // 一手で変わる vertical text (means "One hand changes everything")
+          ...['一','手','で','変','わ','る'].map(
+            (c) => Text(
+              c,
+              style: const TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+                color: Color(0xCCFFD4E8),
+                height: 1.6,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(width: 24, height: 1, color: const Color(0x44E8A4B8)),
+          const SizedBox(height: 8),
+          // PLAY CALM PLAY SMART vertical
+          ...['P','L','A','Y',' ','C','A','L','M'].map(
+            (c) => Text(
+              c,
+              style: const TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 6.5,
+                fontWeight: FontWeight.w900,
+                color: Color(0x99FFD4E8),
+                height: 1.5,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(height: 1, color: const Color(0x88E8A4B8)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTableFeltAndPiles() {
     return LayoutBuilder(builder: (context, constraints) {
       final tableWidth = constraints.maxWidth * 0.94;
@@ -1159,6 +1300,15 @@ class _PlayAreaTableState extends State<PlayAreaTable>
                         ),
                       ),
                   ],
+
+                  // Japan theme: Enso circle + 零 kanji painted on tatami
+                  if (widget.theme.showSidePanels)
+                    Center(
+                      child: CustomPaint(
+                        size: const Size(180, 180),
+                        painter: _EnsoPainter(),
+                      ),
+                    ),
 
                   // Center Piles & Turn Banner
                   Column(
@@ -2739,4 +2889,69 @@ class _SpecialHintPill extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Ink-brush Enso circle + 零 kanji painted on the Japan tatami table.
+class _EnsoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final r = size.width * 0.44;
+
+    // Ink-brush enso circle — thick, slightly uneven opacity
+    final paint = Paint()
+      ..color = const Color(0x552D1A00)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 14
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: Offset(cx, cy), radius: r),
+      -pi * 0.7,
+      pi * 1.85,
+      false,
+      paint,
+    );
+
+    // Inner faint circle for depth
+    paint
+      ..color = const Color(0x22E8A4B8)
+      ..strokeWidth = 2;
+    canvas.drawCircle(Offset(cx, cy), r * 0.72, paint);
+
+    // 零 kanji in center (drawn as text)
+    final tp = TextPainter(
+      text: const TextSpan(
+        text: '零',
+        style: TextStyle(
+          fontSize: 38,
+          color: Color(0x66C8787E),
+          fontWeight: FontWeight.w900,
+          height: 1.0,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, Offset(cx - tp.width / 2, cy - tp.height / 2 - 2));
+
+    // ZERO COUNT label below kanji
+    final sub = TextPainter(
+      text: const TextSpan(
+        text: 'ZERO COUNT',
+        style: TextStyle(
+          fontSize: 8,
+          color: Color(0x55C8787E),
+          fontWeight: FontWeight.w900,
+          letterSpacing: 2.5,
+          height: 1.0,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    sub.paint(canvas, Offset(cx - sub.width / 2, cy + 24));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
